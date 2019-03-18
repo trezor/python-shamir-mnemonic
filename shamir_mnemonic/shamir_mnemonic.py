@@ -38,14 +38,20 @@ class MnemonicError(Exception):
 
 
 class ShamirMnemonic(object):
-    ID_LENGTH_WORDS = 2
-    """The length of the random identifier in words."""
-
     RADIX_BITS = 10
     """The length of the radix in bits."""
 
     RADIX = 2 ** RADIX_BITS
     """The number of words in the wordlist."""
+
+    ID_LENGTH_BITS = 15
+    """The length of the random identifier in bits."""
+
+    ITERATION_EXP_LENGTH_BITS = 5
+    """The length of the iteration exponent in bits."""
+
+    ID_EXP_LENGTH_WORDS = (ID_LENGTH_BITS + ITERATION_EXP_LENGTH_BITS) // RADIX_BITS
+    """The length of the random identifier and iteration exponent in words."""
 
     MAX_SHARE_COUNT = 2 ** (RADIX_BITS // 2)
     """The maximum number of shares that can be created."""
@@ -53,13 +59,13 @@ class ShamirMnemonic(object):
     CHECKSUM_LENGTH_WORDS = 3
     """The length of the RS1024 checksum in words."""
 
-    PMS_CHECKSUM_LENGTH_BYTES = 4
-    """The length of the pre-master secret checksum in bytes."""
+    HASH_LENGTH_BYTES = 4
+    """The length of the hash of the shared secret in bytes."""
 
     CUSTOMIZATION_STRING = b"slip0039"
     """The customization string used in the RS1024 checksum and in the PBKDF2 salt."""
 
-    METADATA_LENGTH_WORDS = ID_LENGTH_WORDS + 1 + CHECKSUM_LENGTH_WORDS
+    METADATA_LENGTH_WORDS = ID_EXP_LENGTH_WORDS + 1 + CHECKSUM_LENGTH_WORDS
     """The length of the mnemonic in words without the share value."""
 
     MIN_STRENGTH_BITS = 128
@@ -70,17 +76,17 @@ class ShamirMnemonic(object):
     )
     """The minimum allowed length of the mnemonic in words."""
 
-    ITERATION_COUNT = 20000
-    """The total number of iterations to use in PBKDF2."""
+    MIN_ITERATION_COUNT = 10000
+    """The minimum number of iterations to use in PBKDF2."""
 
     ROUND_COUNT = 4
     """The number of rounds to use in the Feistel cipher."""
 
-    PMS_INDEX = 255
-    """The index of the share containing the pre-master secret."""
+    SECRET_INDEX = 255
+    """The index of the share containing the shared secret."""
 
-    PMS_CHECKSUM_INDEX = 254
-    """The index of the share containing the checksum of the pre-master secret."""
+    HASH_INDEX = 254
+    """The index of the share containing the hash of the shared secret."""
 
     def __init__(self):
         # Generate a table of discrete logarithms and exponents in GF(256) using the polynomial
@@ -211,54 +217,79 @@ class ShamirMnemonic(object):
         return bytes(x ^ y for x, y in zip(a, b))
 
     @classmethod
-    def _round_function(cls, i, passphrase, salt, r):
+    def _int_from_indices(cls, indices):
+        value = 0
+        for index in indices:
+            value = value * cls.RADIX + index
+        return value
+
+    @classmethod
+    def _int_to_indices(cls, value, length):
+        return (
+            (value >> (i * cls.RADIX_BITS)) % cls.RADIX for i in reversed(range(length))
+        )
+
+    @classmethod
+    def _round_function(cls, i, passphrase, e, salt, r):
         """The round function used internally by the Feistel cipher."""
         return hashlib.pbkdf2_hmac(
             "sha256",
             bytes([i]) + passphrase,
             salt + r,
-            cls.ITERATION_COUNT // cls.ROUND_COUNT,
+            (cls.MIN_ITERATION_COUNT << e) // cls.ROUND_COUNT,
             dklen=len(r),
         )
 
     @classmethod
     def _get_salt(cls, identifier):
-        return cls.CUSTOMIZATION_STRING + bytes(
-            b for i in identifier for b in (i >> 8, i & 0xFF)
+        return cls.CUSTOMIZATION_STRING + identifier.to_bytes(
+            math.ceil(cls.ID_LENGTH_BITS / 8), "big"
         )
 
     @classmethod
-    def _encrypt(cls, master_secret, passphrase, identifier):
+    def _encrypt(cls, master_secret, passphrase, iteration_exponent, identifier):
         l = master_secret[: len(master_secret) // 2]
         r = master_secret[len(master_secret) // 2 :]
         salt = cls._get_salt(identifier)
         for i in range(cls.ROUND_COUNT):
-            (l, r) = (r, cls.xor(l, cls._round_function(i, passphrase, salt, r)))
+            (l, r) = (
+                r,
+                cls.xor(
+                    l, cls._round_function(i, passphrase, iteration_exponent, salt, r)
+                ),
+            )
         return r + l
 
     @classmethod
-    def _decrypt(cls, pre_master_secret, passphrase, identifier):
-        l = pre_master_secret[: len(pre_master_secret) // 2]
-        r = pre_master_secret[len(pre_master_secret) // 2 :]
+    def _decrypt(
+        cls, encrypted_master_secret, passphrase, iteration_exponent, identifier
+    ):
+        l = encrypted_master_secret[: len(encrypted_master_secret) // 2]
+        r = encrypted_master_secret[len(encrypted_master_secret) // 2 :]
         salt = cls._get_salt(identifier)
         for i in reversed(range(cls.ROUND_COUNT)):
-            (l, r) = (r, cls.xor(l, cls._round_function(i, passphrase, salt, r)))
+            (l, r) = (
+                r,
+                cls.xor(
+                    l, cls._round_function(i, passphrase, iteration_exponent, salt, r)
+                ),
+            )
         return r + l
 
     @classmethod
-    def _create_pms_checksum(cls, pre_master_secret):
-        return hashlib.sha256(hashlib.sha256(pre_master_secret).digest()).digest()[
-            : cls.PMS_CHECKSUM_LENGTH_BYTES
-        ]
+    def _create_hash(cls, encrypted_master_secret):
+        return hashlib.sha256(
+            hashlib.sha256(encrypted_master_secret).digest()
+        ).digest()[: cls.HASH_LENGTH_BYTES]
 
     def _generate_shares(
-        self, threshold, share_count, pre_master_secret, starter_shares=[]
+        self, threshold, share_count, encrypted_master_secret, starter_shares=[]
     ):
         assert 0 < threshold <= share_count <= self.MAX_SHARE_COUNT
 
-        # If the threshold is 1, then the PMS checksum is not used.
+        # If the threshold is 1, then the hash of the shared secret is not used.
         if threshold == 1:
-            return [(i, pre_master_secret) for i in range(share_count)]
+            return [(i, encrypted_master_secret) for i in range(share_count)]
 
         random_share_count = threshold - 2 - len(starter_shares)
         assert random_share_count >= 0
@@ -273,21 +304,18 @@ class ShamirMnemonic(object):
             )
 
         shares = [
-            (next_index + i, os.urandom(len(pre_master_secret)))
+            (next_index + i, os.urandom(len(encrypted_master_secret)))
             for i in range(random_share_count)
         ]
 
-        pms_checksum = self._create_pms_checksum(pre_master_secret) + os.urandom(
-            len(pre_master_secret) - self.PMS_CHECKSUM_LENGTH_BYTES
+        hash = self._create_hash(encrypted_master_secret) + os.urandom(
+            len(encrypted_master_secret) - self.HASH_LENGTH_BYTES
         )
 
         base_shares = (
             shares
             + list(starter_shares)
-            + [
-                (self.PMS_CHECKSUM_INDEX, pms_checksum),
-                (self.PMS_INDEX, pre_master_secret),
-            ]
+            + [(self.HASH_INDEX, hash), (self.SECRET_INDEX, encrypted_master_secret)]
         )
 
         for i in range(
@@ -299,15 +327,13 @@ class ShamirMnemonic(object):
         return shares
 
     def _combine_shares(self, shares, thresholds):
-        pre_master_secret = self._interpolate(shares, self.PMS_INDEX)
+        encrypted_master_secret = self._interpolate(shares, self.SECRET_INDEX)
 
-        # If the threshold is 1, then the PMS checksum is not used.
+        # If the threshold is 1, then the hash of the shared secret is not used.
         if thresholds != {1}:
-            pms_checksum = self._interpolate(
-                shares, self.PMS_CHECKSUM_INDEX, self.PMS_CHECKSUM_LENGTH_BYTES
-            )
+            hash = self._interpolate(shares, self.HASH_INDEX, self.HASH_LENGTH_BYTES)
 
-            if pms_checksum != self._create_pms_checksum(pre_master_secret):
+            if hash != self._create_hash(encrypted_master_secret):
                 if len(shares) < min(thresholds):
                     raise MnemonicError(
                         "Insufficient number of mnemonics. The required number of mnemonics is {}.".format(
@@ -316,18 +342,18 @@ class ShamirMnemonic(object):
                     )
                 else:
                     raise MnemonicError(
-                        "Invalid pre-master secret checksum. The required number of mnemonics is {}.".format(
+                        "Invalid hash of the shared secret. The required number of mnemonics is {}.".format(
                             " or ".join(str(i) for i in sorted(thresholds))
                         )
                     )
 
-        return pre_master_secret
+        return encrypted_master_secret
 
-    def _encode_mnemonic(self, identifier, threshold, index, value):
+    def _encode_mnemonic(self, identifier, iteration_exponent, threshold, index, value):
         """
         Converts share data to a share mnemonic.
-        :param identifier: The random identifier.
-        :type identifier: A tuple of integers in the range 0, ... , RADIX - 1.
+        :param int identifier: The random identifier.
+        :param int iteration_exponent: The iteration exponent.
         :param int threshold: The threshold value.
         :param int index: The x coordinate of the share.
         :param value: The share value representing the y coordinates of the share.
@@ -339,13 +365,12 @@ class ShamirMnemonic(object):
         # Convert the share value from bytes to wordlist indices.
         value_word_count = math.ceil(len(value) * 8 / self.RADIX_BITS)
         value_int = int.from_bytes(value, "big")
-        value_data = tuple(
-            (value_int >> (i * self.RADIX_BITS)) % self.RADIX
-            for i in reversed(range(value_word_count))
-        )
+        id_exp_int = (identifier << self.ITERATION_EXP_LENGTH_BITS) + iteration_exponent
 
         share_data = (
-            identifier + ((threshold - 1) * self.MAX_SHARE_COUNT + index,) + value_data
+            tuple(self._int_to_indices(id_exp_int, self.ID_EXP_LENGTH_WORDS))
+            + ((threshold - 1) * self.MAX_SHARE_COUNT + index,)
+            + tuple(self._int_to_indices(value_int, value_word_count))
         )
         checksum = self._rs1024_create_checksum(share_data)
 
@@ -374,62 +399,64 @@ class ShamirMnemonic(object):
         if not self._rs1024_verify_checksum(mnemonic_data):
             raise MnemonicError(
                 'Invalid mnemonic checksum for "{} ...".'.format(
-                    " ".join(mnemonic.split()[: self.ID_LENGTH_WORDS + 1])
+                    " ".join(mnemonic.split()[: self.ID_EXP_LENGTH_WORDS + 2])
                 )
             )
 
-        identifier = mnemonic_data[: self.ID_LENGTH_WORDS]
-        index = mnemonic_data[self.ID_LENGTH_WORDS] % self.MAX_SHARE_COUNT
-        threshold = (mnemonic_data[self.ID_LENGTH_WORDS] // self.MAX_SHARE_COUNT) + 1
+        id_exp_int = self._int_from_indices(mnemonic_data[: self.ID_EXP_LENGTH_WORDS])
+        identifier = id_exp_int >> self.ITERATION_EXP_LENGTH_BITS
+        iteration_exponent = id_exp_int & ((1 << self.ITERATION_EXP_LENGTH_BITS) - 1)
+        index = mnemonic_data[self.ID_EXP_LENGTH_WORDS] % self.MAX_SHARE_COUNT
+        threshold = (
+            mnemonic_data[self.ID_EXP_LENGTH_WORDS] // self.MAX_SHARE_COUNT
+        ) + 1
         value_data = mnemonic_data[
-            self.ID_LENGTH_WORDS + 1 : -self.CHECKSUM_LENGTH_WORDS
+            self.ID_EXP_LENGTH_WORDS + 1 : -self.CHECKSUM_LENGTH_WORDS
         ]
 
         # The length of the master secret in bytes is required to be even, so find the largest even
         # integer, which is less than or equal to value_word_count * 10 / 8.
         value_byte_count = 2 * math.floor(len(value_data) * 5 / 8)
-
-        value_int = 0
-        for i in value_data:
-            value_int = value_int * self.RADIX + i
+        value_int = self._int_from_indices(value_data)
 
         try:
             value = value_int.to_bytes(value_byte_count, "big")
         except OverflowError:
             raise MnemonicError("Invalid mnemonic padding.") from None
 
-        return identifier, threshold, index, value
+        return identifier, iteration_exponent, threshold, index, value
 
     def _decode_mnemonics(self, mnemonics):
         identifiers = set()
+        iteration_exponents = set()
         thresholds = set()
         shares = set()
         for mnemonic in mnemonics:
-            identifier, threshold, index, share_value = self._decode_mnemonic(mnemonic)
+            identifier, iteration_exponent, threshold, index, share_value = self._decode_mnemonic(
+                mnemonic
+            )
             identifiers.add(identifier)
+            iteration_exponents.add(iteration_exponent)
             thresholds.add(threshold)
             shares.add((index, share_value))
 
-        if len(identifiers) != 1:
+        if len(identifiers) != 1 or len(iteration_exponents) != 1:
             raise MnemonicError(
                 "Invalid set of mnemonics. All mnemonics must begin with the same {} words.".format(
-                    self.ID_LENGTH_WORDS
+                    self.ID_EXP_LENGTH_WORDS
                 )
             )
 
-        return identifiers.pop(), thresholds, shares
+        return identifiers.pop(), iteration_exponents.pop(), thresholds, shares
 
     @classmethod
     def _generate_random_identifier(cls):
-        """Returns a tuple of randomly generated integers in the range 0, ... , RADIX - 1."""
+        """Returns a randomly generated integer in the range 0, ... , 2**ID_LENGTH_BITS - 1."""
 
-        identifier_int = int.from_bytes(
-            os.urandom(math.ceil(cls.ID_LENGTH_WORDS * cls.RADIX_BITS / 8)), "big"
+        identifier = int.from_bytes(
+            os.urandom(math.ceil(cls.ID_LENGTH_BITS / 8)), "big"
         )
-        return tuple(
-            (identifier_int >> (i * cls.RADIX_BITS)) % cls.RADIX
-            for i in range(cls.ID_LENGTH_WORDS)
-        )
+        return identifier & ((1 << cls.ID_LENGTH_BITS) - 1)
 
     def generate_mnemonics(
         self,
@@ -437,6 +464,7 @@ class ShamirMnemonic(object):
         share_count,
         master_secret,
         passphrase=b"",
+        iteration_exponent=0,
         starter_mnemonics=[],
     ):
         """
@@ -448,6 +476,7 @@ class ShamirMnemonic(object):
         :type master_secret: Array of bytes.
         :param passphrase: The passphrase used to encrypt the master secret.
         :type passphrase: Array of bytes.
+        :param int iteration_exponent: The iteration exponent.
         :param starter_mnemonics: List of existing mnemonics to extend.
         :type starter_mnemonics: List of byte arrays.
         :return: List of mnemonics.
@@ -455,7 +484,7 @@ class ShamirMnemonic(object):
         """
 
         if starter_mnemonics:
-            identifier, _, starter_shares = self._decode_mnemonics(starter_mnemonics)
+            identifier, iteration_exponent, _, starter_shares = self._decode_mnemonics(starter_mnemonics)
             min_threshold = len(starter_shares) + 2
         else:
             identifier = self._generate_random_identifier()
@@ -488,18 +517,27 @@ class ShamirMnemonic(object):
                 )
             )
 
-        pre_master_secret = self._encrypt(master_secret, passphrase, identifier)
+        encrypted_master_secret = self._encrypt(
+            master_secret, passphrase, iteration_exponent, identifier
+        )
         shares = self._generate_shares(
-            threshold, share_count, pre_master_secret, starter_shares
+            threshold, share_count, encrypted_master_secret, starter_shares
         )
 
         return [
-            self._encode_mnemonic(identifier, threshold, index, value)
+            self._encode_mnemonic(
+                identifier, iteration_exponent, threshold, index, value
+            )
             for index, value in shares
         ]
 
     def generate_mnemonics_random(
-        self, threshold, share_count, strength_bits=128, passphrase=b""
+        self,
+        threshold,
+        share_count,
+        strength_bits=128,
+        passphrase=b"",
+        iteration_exponent=0,
     ):
         """
         Generates a random master secret and splits it into mnemonic shares using Shamir's secret
@@ -510,11 +548,12 @@ class ShamirMnemonic(object):
         :param int strength_bits: The entropy of the randomly generated master secret in bits.
         :param passphrase: The passphrase used to encrypt the master secret.
         :type passphrase: Array of bytes.
+        :param int iteration_exponent: The iteration exponent.
         :return: List of mnemonics.
         :rtype: List of byte arrays.
         """
 
-        if len(master_secret) * 8 < self.MIN_STRENGTH_BITS:
+        if strength_bits < self.MIN_STRENGTH_BITS:
             raise ValueError(
                 "The requested strength of the master secret ({} bits) must be at least {} bits.".format(
                     strength_bits, self.MIN_STRENGTH_BITS
@@ -529,7 +568,11 @@ class ShamirMnemonic(object):
             )
 
         return self.generate_mnemonics(
-            threshold, share_count, os.urandom(strength_bits // 8), passphrase
+            threshold,
+            share_count,
+            os.urandom(strength_bits // 8),
+            passphrase,
+            iteration_exponent,
         )
 
     def combine_mnemonics(self, mnemonics, passphrase=b""):
@@ -547,8 +590,13 @@ class ShamirMnemonic(object):
         if not mnemonics:
             raise MnemonicError("The list of mnemonics is empty.")
 
-        identifier, thresholds, shares = self._decode_mnemonics(mnemonics)
+        identifier, iteration_exponent, thresholds, shares = self._decode_mnemonics(
+            mnemonics
+        )
 
         return self._decrypt(
-            self._combine_shares(shares, thresholds), passphrase, identifier
+            self._combine_shares(shares, thresholds),
+            passphrase,
+            iteration_exponent,
+            identifier,
         )
