@@ -330,6 +330,15 @@ class ShamirMnemonic(object):
 
         return encrypted_master_secret
 
+    @classmethod
+    def _group_prefix(
+        cls, identifier, iteration_exponent, group_index, group_threshold
+    ):
+        id_exp_int = (identifier << cls.ITERATION_EXP_LENGTH_BITS) + iteration_exponent
+        return tuple(cls._int_to_indices(id_exp_int, cls.ID_EXP_LENGTH_WORDS)) + (
+            group_index * cls.MAX_SHARE_COUNT + (group_threshold - 1),
+        )
+
     def _encode_mnemonic(
         self,
         identifier,
@@ -357,14 +366,12 @@ class ShamirMnemonic(object):
         # Convert the share value from bytes to wordlist indices.
         value_word_count = math.ceil(len(value) * 8 / self.RADIX_BITS)
         value_int = int.from_bytes(value, "big")
-        id_exp_int = (identifier << self.ITERATION_EXP_LENGTH_BITS) + iteration_exponent
 
         share_data = (
-            tuple(self._int_to_indices(id_exp_int, self.ID_EXP_LENGTH_WORDS))
-            + (
-                group_index * self.MAX_SHARE_COUNT + (group_threshold - 1),
-                member_index * self.MAX_SHARE_COUNT + (member_threshold - 1),
+            self._group_prefix(
+                identifier, iteration_exponent, group_index, group_threshold
             )
+            + (member_index * self.MAX_SHARE_COUNT + (member_threshold - 1),)
             + tuple(self._int_to_indices(value_int, value_word_count))
         )
         checksum = self._rs1024_create_checksum(share_data)
@@ -626,19 +633,29 @@ class ShamirMnemonic(object):
             )
 
         # Remove the groups, where the number of shares is below the member threshold.
-        bad_groups = {group_index: group for group_index, group in groups.items() if len(group[1]) < group[0]}
+        bad_groups = {
+            group_index: group
+            for group_index, group in groups.items()
+            if len(group[1]) < group[0]
+        }
         for group_index in bad_groups:
             groups.pop(group_index)
 
         if len(groups) < group_threshold:
             group_index, group = next(iter(bad_groups.items()))
+            prefix = self._group_prefix(
+                identifier, iteration_exponent, group_index, group_threshold
+            )
             raise MnemonicError(
-                "Insufficient number of mnemonics in group {}. At least {} are required.".format(
-                    group_index, group[0]
+                'Insufficient number of mnemonics. At least {} mnemonics starting with "{} ..." are required.'.format(
+                    group[0], " ".join(self.wordlist[i] for i in prefix)
                 )
             )
 
-        group_shares = [(group_index, self._combine_shares(group[0], group[1])) for group_index, group in groups.items()]
+        group_shares = [
+            (group_index, self._combine_shares(group[0], group[1]))
+            for group_index, group in groups.items()
+        ]
 
         return self._decrypt(
             self._combine_shares(group_threshold, group_shares),
