@@ -620,20 +620,25 @@ class ShamirMnemonic(object):
 
         if len(groups) < group_threshold:
             raise MnemonicError(
-                "Insufficient number of mnemonic groups. The required number of groups is {}.".format(
-                    group_threshold
+                "Insufficient number of mnemonic groups ({}). The required number of groups is {}.".format(
+                    len(groups), group_threshold
                 )
             )
 
-        group_shares = []
-        for group_index, group in groups.items():
-            if len(groups) < group_threshold:
-                raise MnemonicError(
-                    "Insufficient number of mnemonics in group {}. At least {} are required.".format(
-                        group_index, group_threshold
-                    )
+        # Remove the groups, where the number of shares is below the member threshold.
+        bad_groups = {group_index: group for group_index, group in groups.items() if len(group[1]) < group[0]}
+        for group_index in bad_groups:
+            groups.pop(group_index)
+
+        if len(groups) < group_threshold:
+            group_index, group = next(iter(bad_groups.items()))
+            raise MnemonicError(
+                "Insufficient number of mnemonics in group {}. At least {} are required.".format(
+                    group_index, group[0]
                 )
-            group_shares.append((group_index, self._combine_shares(group[0], group[1])))
+            )
+
+        group_shares = [(group_index, self._combine_shares(group[0], group[1])) for group_index, group in groups.items()]
 
         return self._decrypt(
             self._combine_shares(group_threshold, group_shares),
