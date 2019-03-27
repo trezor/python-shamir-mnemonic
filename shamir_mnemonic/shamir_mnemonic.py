@@ -22,6 +22,7 @@
 
 import os
 import hashlib
+import hmac
 import math
 
 
@@ -59,8 +60,8 @@ class ShamirMnemonic(object):
     CHECKSUM_LENGTH_WORDS = 3
     """The length of the RS1024 checksum in words."""
 
-    HASH_LENGTH_BYTES = 4
-    """The length of the hash of the shared secret in bytes."""
+    DIGEST_LENGTH_BYTES = 4
+    """The length of the digest of the shared secret in bytes."""
 
     CUSTOMIZATION_STRING = b"shamir"
     """The customization string used in the RS1024 checksum and in the PBKDF2 salt."""
@@ -85,8 +86,8 @@ class ShamirMnemonic(object):
     SECRET_INDEX = 255
     """The index of the share containing the shared secret."""
 
-    HASH_INDEX = 254
-    """The index of the share containing the hash of the shared secret."""
+    DIGEST_INDEX = 254
+    """The index of the share containing the digest of the shared secret."""
 
     def __init__(self):
         # Generate a table of discrete logarithms and exponents in GF(256) using the polynomial
@@ -279,15 +280,15 @@ class ShamirMnemonic(object):
         return r + l
 
     @classmethod
-    def _create_hash(cls, shared_secret):
-        return hashlib.sha256(hashlib.sha256(shared_secret).digest()).digest()[
-            : cls.HASH_LENGTH_BYTES
+    def _create_digest(cls, random_data, shared_secret):
+        return hmac.new(random_data, shared_secret, "sha256").digest()[
+            : cls.DIGEST_LENGTH_BYTES
         ]
 
     def _split_secret(self, threshold, share_count, shared_secret):
         assert 0 < threshold <= share_count <= self.MAX_SHARE_COUNT
 
-        # If the threshold is 1, then the hash of the shared secret is not used.
+        # If the threshold is 1, then the digest of the shared secret is not used.
         if threshold == 1:
             return [(i, shared_secret) for i in range(share_count)]
 
@@ -304,12 +305,11 @@ class ShamirMnemonic(object):
             (i, os.urandom(len(shared_secret))) for i in range(random_share_count)
         ]
 
-        hash = self._create_hash(shared_secret) + os.urandom(
-            len(shared_secret) - self.HASH_LENGTH_BYTES
-        )
+        random_part = os.urandom(len(shared_secret) - self.DIGEST_LENGTH_BYTES)
+        digest = self._create_digest(random_part, shared_secret)
 
         base_shares = shares + [
-            (self.HASH_INDEX, hash),
+            (self.DIGEST_INDEX, digest + random_part),
             (self.SECRET_INDEX, shared_secret),
         ]
 
@@ -321,12 +321,14 @@ class ShamirMnemonic(object):
     def _recover_secret(self, threshold, shares):
         shared_secret = self._interpolate(shares, self.SECRET_INDEX)
 
-        # If the threshold is 1, then the hash of the shared secret is not used.
+        # If the threshold is 1, then the digest of the shared secret is not used.
         if threshold != 1:
-            hash = self._interpolate(shares, self.HASH_INDEX, self.HASH_LENGTH_BYTES)
+            digest_share = self._interpolate(shares, self.DIGEST_INDEX)
+            digest = digest_share[: self.DIGEST_LENGTH_BYTES]
+            random_part = digest_share[self.DIGEST_LENGTH_BYTES :]
 
-            if hash != self._create_hash(shared_secret):
-                raise MnemonicError("Invalid hash of the shared secret.")
+            if digest != self._create_digest(random_part, shared_secret):
+                raise MnemonicError("Invalid digest of the shared secret.")
 
         return shared_secret
 
