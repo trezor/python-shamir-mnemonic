@@ -279,12 +279,12 @@ class ShamirMnemonic(object):
         return r + l
 
     @classmethod
-    def _create_hash(cls, encrypted_master_secret):
-        return hashlib.sha256(
-            hashlib.sha256(encrypted_master_secret).digest()
-        ).digest()[: cls.HASH_LENGTH_BYTES]
+    def _create_hash(cls, shared_secret):
+        return hashlib.sha256(hashlib.sha256(shared_secret).digest()).digest()[
+            : cls.HASH_LENGTH_BYTES
+        ]
 
-    def _generate_shares(self, threshold, share_count, shared_secret):
+    def _split_secret(self, threshold, share_count, shared_secret):
         assert 0 < threshold <= share_count <= self.MAX_SHARE_COUNT
 
         # If the threshold is 1, then the hash of the shared secret is not used.
@@ -318,17 +318,17 @@ class ShamirMnemonic(object):
 
         return shares
 
-    def _combine_shares(self, threshold, shares):
-        encrypted_master_secret = self._interpolate(shares, self.SECRET_INDEX)
+    def _recover_secret(self, threshold, shares):
+        shared_secret = self._interpolate(shares, self.SECRET_INDEX)
 
         # If the threshold is 1, then the hash of the shared secret is not used.
         if threshold != 1:
             hash = self._interpolate(shares, self.HASH_INDEX, self.HASH_LENGTH_BYTES)
 
-            if hash != self._create_hash(encrypted_master_secret):
+            if hash != self._create_hash(shared_secret):
                 raise MnemonicError("Invalid hash of the shared secret.")
 
-        return encrypted_master_secret
+        return shared_secret
 
     @classmethod
     def _group_prefix(
@@ -538,7 +538,7 @@ class ShamirMnemonic(object):
             master_secret, passphrase, iteration_exponent, identifier
         )
 
-        group_shares = self._generate_shares(
+        group_shares = self._split_secret(
             group_threshold, len(groups), encrypted_master_secret
         )
 
@@ -555,7 +555,7 @@ class ShamirMnemonic(object):
             for (member_threshold, member_count), (group_index, group_secret) in zip(
                 groups, group_shares
             )
-            for member_index, value in self._generate_shares(
+            for member_index, value in self._split_secret(
                 member_threshold, member_count, group_secret
             )
         ]
@@ -653,12 +653,12 @@ class ShamirMnemonic(object):
             )
 
         group_shares = [
-            (group_index, self._combine_shares(group[0], group[1]))
+            (group_index, self._recover_secret(group[0], group[1]))
             for group_index, group in groups.items()
         ]
 
         return self._decrypt(
-            self._combine_shares(group_threshold, group_shares),
+            self._recover_secret(group_threshold, group_shares),
             passphrase,
             iteration_exponent,
             identifier,
