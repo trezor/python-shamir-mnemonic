@@ -20,10 +20,10 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-import os
 import hashlib
 import hmac
 import math
+import os
 
 
 class ConfigurationError(Exception):
@@ -545,20 +545,22 @@ class ShamirMnemonic(object):
         )
 
         return [
-            self._encode_mnemonic(
-                identifier,
-                iteration_exponent,
-                group_index,
-                group_threshold,
-                member_index,
-                member_threshold,
-                value,
-            )
+            [
+                self._encode_mnemonic(
+                    identifier,
+                    iteration_exponent,
+                    group_index,
+                    group_threshold,
+                    member_index,
+                    member_threshold,
+                    value,
+                )
+                for member_index, value in self._split_secret(
+                    member_threshold, member_count, group_secret
+                )
+            ]
             for (member_threshold, member_count), (group_index, group_secret) in zip(
                 groups, group_shares
-            )
-            for member_index, value in self._split_secret(
-                member_threshold, member_count, group_secret
             )
         ]
 
