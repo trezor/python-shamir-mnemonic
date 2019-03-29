@@ -89,10 +89,11 @@ class ShamirMnemonic(object):
     DIGEST_INDEX = 254
     """The index of the share containing the digest of the shared secret."""
 
-    def __init__(self):
+    def __init__(self, random_bytes=os.urandom):
         # Generate a table of discrete logarithms and exponents in GF(256) using the polynomial
         # x + 1 as the base.
 
+        self.random_bytes = random_bytes
         self.exp = [0 for i in range(255)]
         self.log = [0 for i in range(256)]
 
@@ -232,6 +233,15 @@ class ShamirMnemonic(object):
             (value >> (i * cls.RADIX_BITS)) % cls.RADIX for i in reversed(range(length))
         )
 
+    def mnemonic_from_indices(self, indices):
+        return " ".join(self.wordlist[i] for i in indices)
+
+    def mnemonic_to_indices(self, mnemonic):
+        try:
+            return (self.word_index_map[word.lower()] for word in mnemonic.split())
+        except KeyError as key_error:
+            raise MnemonicError("Invalid mnemonic word {}.".format(key_error)) from None
+
     @classmethod
     def _round_function(cls, i, passphrase, e, salt, r):
         """The round function used internally by the Feistel cipher."""
@@ -302,10 +312,11 @@ class ShamirMnemonic(object):
             )
 
         shares = [
-            (i, os.urandom(len(shared_secret))) for i in range(random_share_count)
+            (i, self.random_bytes(len(shared_secret)))
+            for i in range(random_share_count)
         ]
 
-        random_part = os.urandom(len(shared_secret) - self.DIGEST_LENGTH_BYTES)
+        random_part = self.random_bytes(len(shared_secret) - self.DIGEST_LENGTH_BYTES)
         digest = self._create_digest(random_part, shared_secret)
 
         base_shares = shares + [
@@ -341,7 +352,7 @@ class ShamirMnemonic(object):
             group_index * cls.MAX_SHARE_COUNT + (group_threshold - 1),
         )
 
-    def _encode_mnemonic(
+    def encode_mnemonic(
         self,
         identifier,
         iteration_exponent,
@@ -378,17 +389,12 @@ class ShamirMnemonic(object):
         )
         checksum = self._rs1024_create_checksum(share_data)
 
-        return " ".join(self.wordlist[i] for i in share_data + checksum)
+        return self.mnemonic_from_indices(share_data + checksum)
 
-    def _decode_mnemonic(self, mnemonic):
+    def decode_mnemonic(self, mnemonic):
         """Converts a share mnemonic to share data."""
 
-        try:
-            mnemonic_data = tuple(
-                self.word_index_map[word.lower()] for word in mnemonic.split()
-            )
-        except KeyError as key_error:
-            raise MnemonicError("Invalid mnemonic word {}.".format(key_error)) from None
+        mnemonic_data = tuple(self.mnemonic_to_indices(mnemonic))
 
         if len(mnemonic_data) < self.MIN_MNEMONIC_LENGTH_WORDS:
             raise MnemonicError(
@@ -450,7 +456,7 @@ class ShamirMnemonic(object):
         group_thresholds = set()
         groups = {}  # { group_index : [member_threshold, set_of_member_shares] }
         for mnemonic in mnemonics:
-            identifier, iteration_exponent, group_index, group_threshold, member_index, member_threshold, share_value = self._decode_mnemonic(
+            identifier, iteration_exponent, group_index, group_threshold, member_index, member_threshold, share_value = self.decode_mnemonic(
                 mnemonic
             )
             identifiers.add(identifier)
@@ -482,14 +488,13 @@ class ShamirMnemonic(object):
             groups,
         )
 
-    @classmethod
-    def _generate_random_identifier(cls):
+    def _generate_random_identifier(self):
         """Returns a randomly generated integer in the range 0, ... , 2**ID_LENGTH_BITS - 1."""
 
         identifier = int.from_bytes(
-            os.urandom(math.ceil(cls.ID_LENGTH_BITS / 8)), "big"
+            self.random_bytes(math.ceil(self.ID_LENGTH_BITS / 8)), "big"
         )
-        return identifier & ((1 << cls.ID_LENGTH_BITS) - 1)
+        return identifier & ((1 << self.ID_LENGTH_BITS) - 1)
 
     def generate_mnemonics(
         self,
@@ -546,7 +551,7 @@ class ShamirMnemonic(object):
 
         return [
             [
-                self._encode_mnemonic(
+                self.encode_mnemonic(
                     identifier,
                     iteration_exponent,
                     group_index,
@@ -605,7 +610,7 @@ class ShamirMnemonic(object):
         return self.generate_mnemonics(
             group_threshold,
             groups,
-            os.urandom(strength_bits // 8),
+            self.random_bytes(strength_bits // 8),
             passphrase,
             iteration_exponent,
         )
@@ -652,7 +657,7 @@ class ShamirMnemonic(object):
             )
             raise MnemonicError(
                 'Insufficient number of mnemonics. At least {} mnemonics starting with "{} ..." are required.'.format(
-                    group[0], " ".join(self.wordlist[i] for i in prefix)
+                    group[0], self.mnemonic_from_indices(prefix)
                 )
             )
 

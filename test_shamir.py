@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from shamir_mnemonic.shamir_mnemonic import MnemonicError, ShamirMnemonic
@@ -68,6 +70,19 @@ def test_group_sharing():
     # One group of two required.
     with pytest.raises(MnemonicError):
         shamir.combine_mnemonics(mnemonics[0][1:4])
+
+
+def test_vectors():
+    with open("vectors.json", "r") as f:
+        vectors = json.load(f)
+    for mnemonics, secret in vectors:
+        if secret:
+            assert bytes.fromhex(secret) == shamir.combine_mnemonics(
+                mnemonics, b"TREZOR"
+            )
+        else:
+            with pytest.raises(MnemonicError):
+                shamir.combine_mnemonics(mnemonics)
 
 
 def test_invalid_rs1024_checksum():
