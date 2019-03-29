@@ -27,11 +27,14 @@ if __name__ == "__main__":
         output.append(([mnemonic], ""))
 
         # Mnemonic with invalid padding.
-        overflowing_bits = (8 * n) % shamir.RADIX_BITS
+        overflowing_bits = (8 * n) % ShamirMnemonic.RADIX_BITS
         if overflowing_bits:
             indices = list(shamir.mnemonic_to_indices(groups[0][0]))
-            indices[5] += 1 << overflowing_bits
-            mnemonic = shamir.mnemonic_from_indices(indices)
+            indices[4] += 1 << overflowing_bits
+            indices = tuple(indices[: -ShamirMnemonic.CHECKSUM_LENGTH_WORDS])
+            mnemonic = shamir.mnemonic_from_indices(
+                indices + ShamirMnemonic.rs1024_create_checksum(indices)
+            )
             output.append(([mnemonic], ""))
 
         # Basic sharing 2-of-3.
@@ -101,14 +104,14 @@ if __name__ == "__main__":
         output.append((mnemonics, secret.hex()))
 
     # Mnemonic with insufficient length.
-    secret = random_bytes((shamir.MIN_STRENGTH_BITS // 8) - 2)
-    identifier = random.randrange(1 << shamir.ID_LENGTH_BITS)
+    secret = random_bytes((ShamirMnemonic.MIN_STRENGTH_BITS // 8) - 2)
+    identifier = random.randrange(1 << ShamirMnemonic.ID_LENGTH_BITS)
     mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 0, 1, secret)
     output.append(([mnemonic], ""))
 
-    # Mnemonic with invalid length.
-    secret = b"\xff" + random_bytes(shamir.MIN_STRENGTH_BITS // 8)
-    identifier = random.randrange(1 << shamir.ID_LENGTH_BITS)
+    # Mnemonic with invalid length. The length of the master secret is not a multiple of 16 bits.
+    secret = b"\xff" + random_bytes(ShamirMnemonic.MIN_STRENGTH_BITS // 8)
+    identifier = random.randrange(1 << ShamirMnemonic.ID_LENGTH_BITS)
     mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 0, 1, secret)
     output.append(([mnemonic], ""))
 

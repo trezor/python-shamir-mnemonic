@@ -200,7 +200,7 @@ class ShamirMnemonic(object):
         return chk
 
     @classmethod
-    def _rs1024_create_checksum(cls, data):
+    def rs1024_create_checksum(cls, data):
         values = (
             tuple(cls.CUSTOMIZATION_STRING) + data + cls.CHECKSUM_LENGTH_WORDS * (0,)
         )
@@ -211,7 +211,7 @@ class ShamirMnemonic(object):
         )
 
     @classmethod
-    def _rs1024_verify_checksum(cls, data):
+    def rs1024_verify_checksum(cls, data):
         return cls._rs1024_polymod(tuple(cls.CUSTOMIZATION_STRING) + data) == 1
 
     @staticmethod
@@ -387,7 +387,7 @@ class ShamirMnemonic(object):
             + (member_index * self.MAX_SHARE_COUNT + (member_threshold - 1),)
             + tuple(self._int_to_indices(value_int, value_word_count))
         )
-        checksum = self._rs1024_create_checksum(share_data)
+        checksum = self.rs1024_create_checksum(share_data)
 
         return self.mnemonic_from_indices(share_data + checksum)
 
@@ -406,7 +406,7 @@ class ShamirMnemonic(object):
         if (10 * (len(mnemonic_data) - self.METADATA_LENGTH_WORDS)) % 16 > 8:
             raise MnemonicError("Invalid mnemonic length.")
 
-        if not self._rs1024_verify_checksum(mnemonic_data):
+        if not self.rs1024_verify_checksum(mnemonic_data):
             raise MnemonicError(
                 'Invalid mnemonic checksum for "{} ...".'.format(
                     " ".join(mnemonic.split()[: self.ID_EXP_LENGTH_WORDS + 2])
