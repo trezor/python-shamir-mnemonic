@@ -188,6 +188,8 @@ def recover(passphrase_prompt):
             print_group_status(i)
         for i in sorted(group_indices):
             print_group_status(i)
+        first_words_bold = style(" ".join(first_words), bold=True)
+        click.echo(f"or more groups starting with {first_words_bold}")
 
     while True:
         try:
