@@ -1,5 +1,5 @@
 python-shamir-mnemonic
-===============
+======================
 
 Reference implementation of SLIP-0039: Shamir's Secret-Sharing for Mnemonic
 Codes
@@ -25,12 +25,12 @@ Installation
 
 With pip from GitHub:
 
-.. code_block:: console
+.. code-block:: bash
 
     $ pip3 install https://github.com/trezor/python-shamir-mnemonic
 
 From local checkout for development:
 
-.. code_block:: console
+.. code-block:: console
 
     $ python3 setup.py develop
