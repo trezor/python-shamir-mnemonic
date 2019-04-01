@@ -20,3 +20,17 @@ Specification
 See https://github.com/satoshilabs/slips/blob/master/slip-0039.md for full
 specification.
 
+Installation
+------------
+
+With pip from GitHub:
+
+.. code_block:: console
+
+    $ pip3 install https://github.com/trezor/python-shamir-mnemonic
+
+From local checkout for development:
+
+.. code_block:: console
+
+    $ python3 setup.py develop
