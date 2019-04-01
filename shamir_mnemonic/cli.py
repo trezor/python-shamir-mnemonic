@@ -1,9 +1,10 @@
 import os
+from collections import namedtuple, defaultdict
 
 import click
 from click import style
 
-from .shamir_mnemonic import ShamirMnemonic
+from .shamir_mnemonic import ShamirMnemonic, MnemonicError
 
 shamir = ShamirMnemonic()
 
@@ -66,6 +67,11 @@ def create(
     if password_prompt and password:
         raise click.ClickException("Use only one of: -p, --password")
 
+    if (password_prompt or password) and not master_secret:
+        raise click.ClickException(
+            "Only use password in conjunction with an explicit master secret"
+        )
+
     if scheme == "single":
         threshold = 1
         groups = [(1, 1)]
@@ -122,6 +128,107 @@ def create(
         click.echo(f"{group_str} - {share_str}")
         for g in group:
             click.echo(g)
+
+
+MnemonicData = namedtuple(
+    "MnemonicData",
+    "str identifier exponent group_index group_threshold index threshold value",
+)
+
+
+FINISHED = style("\u2713", fg="green", bold=True)
+EMPTY = style("\u2717", fg="red", bold=True)
+INPROGRESS = style("\u26ec", fg="yellow", bold=True)
+
+
+def error(s):
+    click.echo(style("ERROR: ", fg="red") + s)
+
+
+@cli.command()
+@click.option("-p", "passphrase_prompt", is_flag=True, help="Use passphrase after recovering")
+def recover(passphrase_prompt):
+    first_words = None
+    group_threshold = None
+    groups = defaultdict(set)  # group idx : shares
+
+    def make_group_prefix(idx):
+        fake_group_prefix = shamir._group_prefix(0, 0, idx, group_threshold)
+        group_word = shamir.mnemonic_from_indices(fake_group_prefix).split()[2]
+        return " ".join(first_words + [group_word])
+
+    def print_group_status(idx):
+        group = groups[idx]
+        group_prefix = style(make_group_prefix(idx), bold=True)
+        bi = style(str(len(group)), bold=True)
+        if not group:
+            click.echo(f"{EMPTY} {bi} shares from group {group_prefix}")
+        else:
+            elem = next(iter(group))
+            prefix = FINISHED if len(group) == elem.threshold else INPROGRESS
+            bt = style(str(elem.threshold), bold=True)
+            click.echo(f"{prefix} {bi} of {bt} shares needed from group {group_prefix}")
+
+    def group_is_complete(idx):
+        group = groups[idx]
+        if not group:
+            return False
+        return len(group) == next(iter(group)).threshold
+
+    def print_status():
+        click.secho("STATUS", bold=True, fg="blue")
+        group_indices = set(groups.keys())
+        for i in range(group_threshold):
+            group_indices.discard(i)
+            print_group_status(i)
+        for i in sorted(group_indices):
+            print_group_status(i)
+
+    while True:
+        try:
+            mnemonic_str = click.prompt("Enter a recovery share")
+            words = mnemonic_str.split()
+            data = MnemonicData(mnemonic_str, *shamir.decode_mnemonic(mnemonic_str))
+
+            if first_words and first_words != words[:2]:
+                error("This mnemonic is not part of the current set. Please try again.")
+
+            first_words = words[:2]
+            group_threshold = data.group_threshold
+
+            groups[data.group_index].add(data)
+
+            try:
+                all_data = set.union(*groups.values())
+                all_mnemonics = [m.str for m in all_data]
+                master_secret = shamir.combine_mnemonics(all_mnemonics)
+                break
+            except MnemonicError:
+                pass
+
+            print_status()
+
+        except click.Abort:
+            return
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            error(str(e))
+            continue
+
+    click.secho("SUCCESS!", fg="green", bold=True)
+    if passphrase_prompt:
+        while True:
+            passphrase = click.prompt("Enter passphrase", hide_input=True, confirmation_prompt=True)
+            try:
+                passphrase_bytes = passphrase.encode("ascii")
+                break
+            except UnicodeDecodeError:
+                click.echo("Passphrase must be ASCII. Please try again.")
+        master_secret = shamir.combine_mnemonics(all_mnemonics, passphrase_bytes)
+
+    click.echo(f"Your master secret is: {master_secret.hex()}")
 
 
 if __name__ == "__main__":
