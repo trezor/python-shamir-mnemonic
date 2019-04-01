@@ -15,8 +15,8 @@ setup(
     url="https://github.com/trezor/python-shamir-mnemonic",
     author="Satoshi Labs",
     packages=["shamir_mnemonic"],
-    python_requires=">=3.5",
-    install_requires=["click>=7,<8"],
+    python_requires=">=3.6",
+    install_requires=["click>=7,<8", "colorama"],
     package_data={"shamir_mnemonic": ["wordlist.txt"]},
     entry_points={"console_scripts": ["shamir=shamir_mnemonic.cli:cli"]},
 )
