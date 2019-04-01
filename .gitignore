@@ -1,0 +1,6 @@
+/.vscode
+__pycache__
+*.egg-info
+
+*.swp
+*.py[co]
