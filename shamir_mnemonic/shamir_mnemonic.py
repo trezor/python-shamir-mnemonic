@@ -123,14 +123,13 @@ class ShamirMnemonic(object):
 
         self.word_index_map = {word: i for i, word in enumerate(self.wordlist)}
 
-    def _interpolate(self, shares, x, out_length=-1):
+    def _interpolate(self, shares, x):
         """
         Returns f(x) given the Shamir shares (x_1, f(x_1)), ... , (x_k, f(x_k)).
         :param shares: The Shamir shares.
         :type shares: A list of pairs (x_i, y_i), where x_i is an integer and y_i is an array of
             bytes representing the evaluations of the polynomials in x_i.
         :param int x: The x coordinate of the result.
-        :param int out_length: The length of the result in bytes.
         :return: Evaluations of the polynomials in x.
         :rtype: Array of bytes.
         """
@@ -156,7 +155,7 @@ class ShamirMnemonic(object):
         # Logarithm of the product of (x_i - x) for i = 1, ... , k.
         log_prod = sum(self.log[share[0] ^ x] for share in shares)
 
-        result = bytes(share_value_lengths.pop() if out_length < 0 else out_length)
+        result = bytes(share_value_lengths.pop())
         for share in shares:
             # The logarithm of the Lagrange basis polynomial evaluated at x.
             log_basis_eval = (
