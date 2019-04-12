@@ -65,17 +65,41 @@ if __name__ == "__main__":
         mnemonics = [shamir.encode_mnemonic(*data)] + groups[1]
         output.append((mnemonics, ""))
 
+        # Mnemonics with mismatching group counts.
+        groups = shamir.generate_mnemonics_random(1, [(2, 2)])
+        data = list(shamir.decode_mnemonic(groups[0][0]))
+        data[4] = 3  # change group count from 1 to 3
+        mnemonics = [shamir.encode_mnemonic(*data), groups[0][1]]
+        output.append((mnemonics, ""))
+
+        # Mnemonics with greater group threshold than group counts.
+        groups = shamir.generate_mnemonics_random(2, [(2, 2), (1, 1)])
+        mnemonics = []
+        for group in groups:
+            for mnemonic in group:
+                data = list(shamir.decode_mnemonic(mnemonic))
+                data[4] = 1  # change group count from 2 to 1
+                mnemonics.append(shamir.encode_mnemonic(*data))
+        output.append((mnemonics, ""))
+
+        # Mnemonics with duplicate member indices.
+        groups = shamir.generate_mnemonics_random(1, [(2, 3)])
+        data = list(shamir.decode_mnemonic(groups[0][0]))
+        data[5] = 2  # change member index from 0 to 2
+        mnemonics = [shamir.encode_mnemonic(*data)] + groups[0][1:]
+        output.append((mnemonics, ""))
+
         # Mnemonics with mismatching member thresholds.
         groups = shamir.generate_mnemonics_random(1, [(2, 2)])
         data = list(shamir.decode_mnemonic(groups[0][0]))
-        data[5] = 1  # change member threshold from 2 to 1
+        data[6] = 1  # change member threshold from 2 to 1
         mnemonics = [shamir.encode_mnemonic(*data), groups[0][1]]
         output.append((mnemonics, ""))
 
         # Mnemonics giving an invalid digest.
         groups = shamir.generate_mnemonics_random(1, [(2, 2)])
         data = list(shamir.decode_mnemonic(groups[0][0]))
-        data[6] = bytes((data[6][0] ^ 1,)) + data[6][1:]  # modify the share value
+        data[7] = bytes((data[7][0] ^ 1,)) + data[7][1:]  # modify the share value
         mnemonics = [shamir.encode_mnemonic(*data), groups[0][1]]
         output.append((mnemonics, ""))
 
@@ -106,13 +130,13 @@ if __name__ == "__main__":
     # Mnemonic with insufficient length.
     secret = random_bytes((ShamirMnemonic.MIN_STRENGTH_BITS // 8) - 2)
     identifier = random.randrange(1 << ShamirMnemonic.ID_LENGTH_BITS)
-    mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 0, 1, secret)
+    mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 1, 0, 1, secret)
     output.append(([mnemonic], ""))
 
     # Mnemonic with invalid length. The length of the master secret is not a multiple of 16 bits.
     secret = b"\xff" + random_bytes(ShamirMnemonic.MIN_STRENGTH_BITS // 8)
     identifier = random.randrange(1 << ShamirMnemonic.ID_LENGTH_BITS)
-    mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 0, 1, secret)
+    mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 1, 0, 1, secret)
     output.append(([mnemonic], ""))
 
     with open("vectors.json", "w") as f:
