@@ -1,10 +1,11 @@
+#!/usr/bin/env python3
 import os
-from collections import namedtuple, defaultdict
+from collections import defaultdict, namedtuple
 
 import click
 from click import style
 
-from .shamir_mnemonic import ShamirMnemonic, MnemonicError
+from shamir_mnemonic import MnemonicError, ShamirMnemonic
 
 shamir = ShamirMnemonic()
 
@@ -21,9 +22,9 @@ def cli():
     "--group",
     "groups",
     type=(int, int),
-    metavar="M N",
+    metavar="T N",
     multiple=True,
-    help="Add a M-of-N group to the collection",
+    help="Add a T-of-N group to the collection",
 )
 @click.option(
     "-t",
@@ -58,7 +59,7 @@ def create(
     \b
     single: Create a single recovery seed.
     2of3: Create 3 shares. Require 2 of them to recover the seed.
-          (You can use any number up to 32. Try 3of5, 4of4, 1of7...)
+          (You can use any number up to 16. Try 3of5, 4of4, 1of7...)
     master: Create 1 master share that can recover the seed by itself,
             plus a 3-of-5 group: 5 shares, with 3 required for recovery.
             Keep the master for yourself, give the 5 shares to trusted friends.
@@ -132,7 +133,7 @@ def create(
 
 MnemonicData = namedtuple(
     "MnemonicData",
-    "str identifier exponent group_index group_threshold index threshold value",
+    "str identifier exponent group_index group_threshold group_count index threshold value",
 )
 
 
@@ -146,14 +147,17 @@ def error(s):
 
 
 @cli.command()
-@click.option("-p", "passphrase_prompt", is_flag=True, help="Use passphrase after recovering")
+@click.option(
+    "-p", "passphrase_prompt", is_flag=True, help="Use passphrase after recovering"
+)
 def recover(passphrase_prompt):
     first_words = None
     group_threshold = None
+    group_count = None
     groups = defaultdict(set)  # group idx : shares
 
     def make_group_prefix(idx):
-        fake_group_prefix = shamir._group_prefix(0, 0, idx, group_threshold)
+        fake_group_prefix = shamir.group_prefix(0, 0, idx, group_threshold, group_count)
         group_word = shamir.mnemonic_from_indices(fake_group_prefix).split()[2]
         return " ".join(first_words + [group_word])
 
@@ -202,6 +206,7 @@ def recover(passphrase_prompt):
 
             first_words = words[:2]
             group_threshold = data.group_threshold
+            group_count = data.group_count
 
             groups[data.group_index].add(data)
 
@@ -227,7 +232,9 @@ def recover(passphrase_prompt):
     click.secho("SUCCESS!", fg="green", bold=True)
     if passphrase_prompt:
         while True:
-            passphrase = click.prompt("Enter passphrase", hide_input=True, confirmation_prompt=True)
+            passphrase = click.prompt(
+                "Enter passphrase", hide_input=True, confirmation_prompt=True
+            )
             try:
                 passphrase_bytes = passphrase.encode("ascii")
                 break

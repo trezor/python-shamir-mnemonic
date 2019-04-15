@@ -1,4 +1,5 @@
 import os.path
+
 from setuptools import setup
 
 HERE = os.path.abspath(os.path.dirname(__file__))

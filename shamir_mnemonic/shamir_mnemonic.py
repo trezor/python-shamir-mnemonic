@@ -133,9 +133,7 @@ class ShamirMnemonic(object):
         x_coordinates = set(share[0] for share in shares)
 
         if len(x_coordinates) != len(shares):
-            raise MnemonicError(
-                "Invalid set of shares. Share indices must be unique."
-            )
+            raise MnemonicError("Invalid set of shares. Share indices must be unique.")
 
         share_value_lengths = set(len(share[1]) for share in shares)
         if len(share_value_lengths) != 1:
@@ -225,9 +223,7 @@ class ShamirMnemonic(object):
     def _int_to_indices(value, length, bits):
         """Converts an integer value to indices in big endian order."""
         mask = (1 << bits) - 1
-        return (
-            (value >> (i * bits)) & mask for i in reversed(range(length))
-        )
+        return ((value >> (i * bits)) & mask for i in reversed(range(length)))
 
     def mnemonic_from_indices(self, indices):
         return " ".join(self.wordlist[i] for i in indices)
@@ -340,12 +336,16 @@ class ShamirMnemonic(object):
         return shared_secret
 
     @classmethod
-    def _group_prefix(
+    def group_prefix(
         cls, identifier, iteration_exponent, group_index, group_threshold, group_count
     ):
         id_exp_int = (identifier << cls.ITERATION_EXP_LENGTH_BITS) + iteration_exponent
-        return tuple(cls._int_to_indices(id_exp_int, cls.ID_EXP_LENGTH_WORDS, cls.RADIX_BITS)) + (
-            (group_index << 6) + ((group_threshold - 1) << 2) + ((group_count - 1) >> 2),
+        return tuple(
+            cls._int_to_indices(id_exp_int, cls.ID_EXP_LENGTH_WORDS, cls.RADIX_BITS)
+        ) + (
+            (group_index << 6)
+            + ((group_threshold - 1) << 2)
+            + ((group_count - 1) >> 2),
         )
 
     def encode_mnemonic(
@@ -379,10 +379,18 @@ class ShamirMnemonic(object):
         value_int = int.from_bytes(value, "big")
 
         share_data = (
-            self._group_prefix(
-                identifier, iteration_exponent, group_index, group_threshold, group_count
+            self.group_prefix(
+                identifier,
+                iteration_exponent,
+                group_index,
+                group_threshold,
+                group_count,
             )
-            + ((((group_count - 1) & 3) << 8) + (member_index << 4) + (member_threshold - 1),)
+            + (
+                (((group_count - 1) & 3) << 8)
+                + (member_index << 4)
+                + (member_threshold - 1),
+            )
             + tuple(self._int_to_indices(value_int, value_word_count, self.RADIX_BITS))
         )
         checksum = self.rs1024_create_checksum(share_data)
@@ -414,8 +422,12 @@ class ShamirMnemonic(object):
         id_exp_int = self._int_from_indices(mnemonic_data[: self.ID_EXP_LENGTH_WORDS])
         identifier = id_exp_int >> self.ITERATION_EXP_LENGTH_BITS
         iteration_exponent = id_exp_int & ((1 << self.ITERATION_EXP_LENGTH_BITS) - 1)
-        tmp = self._int_from_indices(mnemonic_data[self.ID_EXP_LENGTH_WORDS: self.ID_EXP_LENGTH_WORDS + 2])
-        group_index, group_threshold, group_count, member_index,  member_threshold = self._int_to_indices(tmp, 5, 4)
+        tmp = self._int_from_indices(
+            mnemonic_data[self.ID_EXP_LENGTH_WORDS : self.ID_EXP_LENGTH_WORDS + 2]
+        )
+        group_index, group_threshold, group_count, member_index, member_threshold = self._int_to_indices(
+            tmp, 5, 4
+        )
         value_data = mnemonic_data[
             self.ID_EXP_LENGTH_WORDS + 2 : -self.CHECKSUM_LENGTH_WORDS
         ]
@@ -435,7 +447,11 @@ class ShamirMnemonic(object):
         try:
             value = value_int.to_bytes(value_byte_count, "big")
         except OverflowError:
-            raise MnemonicError('Invalid mnemonic padding for "{} ...".'.format(" ".join(mnemonic.split()[: self.ID_EXP_LENGTH_WORDS + 2]))) from None
+            raise MnemonicError(
+                'Invalid mnemonic padding for "{} ...".'.format(
+                    " ".join(mnemonic.split()[: self.ID_EXP_LENGTH_WORDS + 2])
+                )
+            ) from None
 
         return (
             identifier,
@@ -659,8 +675,12 @@ class ShamirMnemonic(object):
 
         if len(groups) < group_threshold:
             group_index, group = next(iter(bad_groups.items()))
-            prefix = self._group_prefix(
-                identifier, iteration_exponent, group_index, group_threshold, group_count
+            prefix = self.group_prefix(
+                identifier,
+                iteration_exponent,
+                group_index,
+                group_threshold,
+                group_count,
             )
             raise MnemonicError(
                 'Insufficient number of mnemonics. At least {} mnemonics starting with "{} ..." are required.'.format(
