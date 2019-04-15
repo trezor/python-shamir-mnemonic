@@ -83,11 +83,3 @@ def test_vectors():
         else:
             with pytest.raises(MnemonicError):
                 shamir.combine_mnemonics(mnemonics)
-
-
-def test_invalid_rs1024_checksum():
-    mnemonics = [
-        "artist away academic academic dismiss spill unkind pencil lair sugar usher elegant paces sweater firm gravity deal body chest sugar"
-    ]
-    with pytest.raises(MnemonicError):
-        shamir.combine_mnemonics(mnemonics)
