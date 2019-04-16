@@ -179,20 +179,14 @@ def recover(passphrase_prompt):
         return len(group) == next(iter(group)).threshold
 
     def print_status():
-        maxidx = max(groups.keys())
         n_completed = len([idx for idx in groups if group_is_complete(idx)])
         bn = style(str(n_completed), bold=True)
         bt = style(str(group_threshold), bold=True)
         click.echo()
-        click.echo(f"Completed {bn} of {bt} groups needed:")
-        group_indices = set(groups.keys())
-        for i in range(maxidx):
-            group_indices.discard(i)
+        if group_count > 1:
+            click.echo(f"Completed {bn} of {bt} groups needed:")
+        for i in range(group_count):
             print_group_status(i)
-        for i in sorted(group_indices):
-            print_group_status(i)
-        first_words_bold = style(" ".join(first_words), bold=True)
-        click.echo(f"or more groups starting with {first_words_bold}")
 
     while True:
         try:
