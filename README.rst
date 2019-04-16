@@ -25,7 +25,7 @@ Installation
 
 With pip from GitHub:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ pip3 install https://github.com/trezor/python-shamir-mnemonic
 
@@ -34,3 +34,24 @@ From local checkout for development:
 .. code-block:: console
 
     $ python3 setup.py develop
+
+CLI usage
+---------
+
+CLI tool is included as a reference and UX testbed. It is **very obviously insecure**.
+DO NOT USE it for generating or decoding any sort of serious secrets.
+
+When the :code:`shamir_mnemonic` package is installed, you can use the :code:`shamir` command:
+
+.. code-block:: console
+
+    $ shamir create 3of5   # create a 3-of-5 set of shares
+
+Use :code:`shamir --help` or :code:`shamir <command> --help` to get detailed help.
+
+If you want to run the CLI from a local checkout without installing, use the following
+command:
+
+.. code-block:: console
+
+    $ python3 -m shamir_mnemonic.cli

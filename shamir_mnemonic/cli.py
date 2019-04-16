@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
 import os
 from collections import defaultdict, namedtuple
 
 import click
 from click import style
 
-from shamir_mnemonic import MnemonicError, ShamirMnemonic
+from .shamir_mnemonic import MnemonicError, ShamirMnemonic
 
 shamir = ShamirMnemonic()
 
