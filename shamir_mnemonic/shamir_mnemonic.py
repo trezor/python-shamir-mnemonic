@@ -22,7 +22,6 @@
 
 import hashlib
 import hmac
-import math
 import os
 
 
@@ -34,9 +33,19 @@ class MnemonicError(Exception):
     pass
 
 
+def bits_to_bytes(n):
+    return (n + 7) // 8
+
+
+def bits_to_words(n):
+    return (n + RADIX_BITS - 1) // RADIX_BITS
+
+
+RADIX_BITS = 10
+"""The length of the radix in bits."""
+
+
 class ShamirMnemonic(object):
-    RADIX_BITS = 10
-    """The length of the radix in bits."""
 
     RADIX = 2 ** RADIX_BITS
     """The number of words in the wordlist."""
@@ -47,7 +56,7 @@ class ShamirMnemonic(object):
     ITERATION_EXP_LENGTH_BITS = 5
     """The length of the iteration exponent in bits."""
 
-    ID_EXP_LENGTH_WORDS = (ID_LENGTH_BITS + ITERATION_EXP_LENGTH_BITS) // RADIX_BITS
+    ID_EXP_LENGTH_WORDS = bits_to_words(ID_LENGTH_BITS + ITERATION_EXP_LENGTH_BITS)
     """The length of the random identifier and iteration exponent in words."""
 
     MAX_SHARE_COUNT = 16
@@ -68,12 +77,10 @@ class ShamirMnemonic(object):
     MIN_STRENGTH_BITS = 128
     """The minimum allowed entropy of the master secret."""
 
-    MIN_MNEMONIC_LENGTH_WORDS = METADATA_LENGTH_WORDS + math.ceil(
-        MIN_STRENGTH_BITS / 10
-    )
+    MIN_MNEMONIC_LENGTH_WORDS = METADATA_LENGTH_WORDS + bits_to_words(MIN_STRENGTH_BITS)
     """The minimum allowed length of the mnemonic in words."""
 
-    MIN_ITERATION_COUNT = 10000
+    BASE_ITERATION_COUNT = 10000
     """The minimum number of iterations to use in PBKDF2."""
 
     ROUND_COUNT = 4
@@ -241,14 +248,14 @@ class ShamirMnemonic(object):
             "sha256",
             bytes([i]) + passphrase,
             salt + r,
-            (cls.MIN_ITERATION_COUNT << e) // cls.ROUND_COUNT,
+            (cls.BASE_ITERATION_COUNT << e) // cls.ROUND_COUNT,
             dklen=len(r),
         )
 
     @classmethod
     def _get_salt(cls, identifier):
         return cls.CUSTOMIZATION_STRING + identifier.to_bytes(
-            math.ceil(cls.ID_LENGTH_BITS / 8), "big"
+            bits_to_bytes(cls.ID_LENGTH_BITS), "big"
         )
 
     @classmethod
@@ -341,7 +348,7 @@ class ShamirMnemonic(object):
     ):
         id_exp_int = (identifier << cls.ITERATION_EXP_LENGTH_BITS) + iteration_exponent
         return tuple(
-            cls._int_to_indices(id_exp_int, cls.ID_EXP_LENGTH_WORDS, cls.RADIX_BITS)
+            cls._int_to_indices(id_exp_int, cls.ID_EXP_LENGTH_WORDS, RADIX_BITS)
         ) + (
             (group_index << 6)
             + ((group_threshold - 1) << 2)
@@ -375,7 +382,7 @@ class ShamirMnemonic(object):
         """
 
         # Convert the share value from bytes to wordlist indices.
-        value_word_count = math.ceil(len(value) * 8 / self.RADIX_BITS)
+        value_word_count = bits_to_words(len(value) * 8)
         value_int = int.from_bytes(value, "big")
 
         share_data = (
@@ -391,7 +398,7 @@ class ShamirMnemonic(object):
                 + (member_index << 4)
                 + (member_threshold - 1),
             )
-            + tuple(self._int_to_indices(value_int, value_word_count, self.RADIX_BITS))
+            + tuple(self._int_to_indices(value_int, value_word_count, RADIX_BITS))
         )
         checksum = self.rs1024_create_checksum(share_data)
 
@@ -409,7 +416,7 @@ class ShamirMnemonic(object):
                 )
             )
 
-        if (10 * (len(mnemonic_data) - self.METADATA_LENGTH_WORDS)) % 16 > 8:
+        if (RADIX_BITS * (len(mnemonic_data) - self.METADATA_LENGTH_WORDS)) % 16 > 8:
             raise MnemonicError("Invalid mnemonic length.")
 
         if not self.rs1024_verify_checksum(mnemonic_data):
@@ -441,7 +448,7 @@ class ShamirMnemonic(object):
 
         # The length of the master secret in bytes is required to be even, so find the largest even
         # integer, which is less than or equal to value_word_count * 10 / 8.
-        value_byte_count = 2 * math.floor(len(value_data) * 5 / 8)
+        value_byte_count = 2 * ((len(value_data) * 5) // 8)
         value_int = self._int_from_indices(value_data)
 
         try:
@@ -514,7 +521,7 @@ class ShamirMnemonic(object):
         """Returns a randomly generated integer in the range 0, ... , 2**ID_LENGTH_BITS - 1."""
 
         identifier = int.from_bytes(
-            self.random_bytes(math.ceil(self.ID_LENGTH_BITS / 8)), "big"
+            self.random_bytes(bits_to_bytes(self.ID_LENGTH_BITS)), "big"
         )
         return identifier & ((1 << self.ID_LENGTH_BITS) - 1)
 
@@ -547,7 +554,7 @@ class ShamirMnemonic(object):
         if len(master_secret) * 8 < self.MIN_STRENGTH_BITS:
             raise ValueError(
                 "The length of the master secret ({} bytes) must be at least {} bytes.".format(
-                    len(master_secret), math.ceil(self.MIN_STRENGTH_BITS / 8)
+                    len(master_secret), bits_to_bytes(self.MIN_STRENGTH_BITS)
                 )
             )
 
