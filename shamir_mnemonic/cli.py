@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict, namedtuple
+import sys
 
 import click
 from click import style
@@ -185,7 +186,7 @@ def recover(passphrase_prompt):
             click.echo(f"{EMPTY} {bi} shares from group {group_prefix}")
         else:
             elem = next(iter(group))
-            prefix = FINISHED if len(group) == elem.threshold else INPROGRESS
+            prefix = FINISHED if len(group) >= elem.threshold else INPROGRESS
             bt = style(str(elem.threshold), bold=True)
             click.echo(f"{prefix} {bi} of {bt} shares needed from group {group_prefix}")
 
@@ -193,7 +194,7 @@ def recover(passphrase_prompt):
         group = groups[idx]
         if not group:
             return False
-        return len(group) == next(iter(group)).threshold
+        return len(group) >= next(iter(group)).threshold
 
     def print_status():
         n_completed = len([idx for idx in groups if group_is_complete(idx)])
@@ -205,7 +206,11 @@ def recover(passphrase_prompt):
         for i in range(group_count):
             print_group_status(i)
 
-    while True:
+    def set_is_complete():
+        n_completed = len([idx for idx in groups if group_is_complete(idx)])
+        return n_completed >= group_threshold
+
+    while group_threshold is None or not set_is_complete():
         try:
             mnemonic_str = click.prompt("Enter a recovery share")
             words = mnemonic_str.split()
@@ -220,24 +225,21 @@ def recover(passphrase_prompt):
 
             groups[data.group_index].add(data)
 
-            try:
-                all_data = set.union(*groups.values())
-                all_mnemonics = [m.str for m in all_data]
-                master_secret = combine_mnemonics(all_mnemonics)
-                break
-            except MnemonicError:
-                pass
-
             print_status()
 
         except click.Abort:
             return
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
             error(str(e))
-            continue
+
+    try:
+        all_data = set.union(*groups.values())
+        all_mnemonics = [m.str for m in all_data]
+        master_secret = combine_mnemonics(all_mnemonics)
+    except MnemonicError as e:
+        error(str(e))
+        click.echo("Recovery failed")
+        sys.exit(1)
 
     click.secho("SUCCESS!", fg="green", bold=True)
     if passphrase_prompt:
