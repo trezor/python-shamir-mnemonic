@@ -43,6 +43,13 @@ def cli():
     "-S", "--master-secret", help="Hex-encoded custom master secret", metavar="HEX"
 )
 @click.option(
+    "-P",
+    "--print-secret",
+    "print_master_secret",
+    is_flag=True,
+    help="Print the raw master secret in addition to shares",
+)
+@click.option(
     "-p", "password_prompt", help="Prompt for passphrase for recovery", is_flag=True
 )
 @click.option("--password", help="Supply passphrase for recovery")
@@ -52,6 +59,7 @@ def create(
     threshold,
     exponent,
     master_secret,
+    print_master_secret,
     password,
     password_prompt,
     strength,
@@ -104,6 +112,10 @@ def create(
             ) from e
     else:
         secret_bytes = os.urandom(strength // 8)
+
+    if print_master_secret:
+        secret_hex = style(secret_bytes.hex(), bold=True)
+        click.echo(f"Using master secret: {secret_hex}")
 
     if password_prompt:
         password = click.prompt(
