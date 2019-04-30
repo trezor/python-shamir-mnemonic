@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from shamir_mnemonic.shamir_mnemonic import MnemonicError, ShamirMnemonic
+import shamir_mnemonic as shamir
+from shamir_mnemonic import MnemonicError
 
 MS = b"ABCDEFGHIJKLMNOP"
-shamir = ShamirMnemonic()
 
 
 def test_basic_sharing_random():

@@ -4,9 +4,14 @@ from collections import defaultdict, namedtuple
 import click
 from click import style
 
-from .shamir_mnemonic import MnemonicError, ShamirMnemonic
-
-shamir = ShamirMnemonic()
+from . import (
+    MnemonicError,
+    generate_mnemonics,
+    combine_mnemonics,
+    decode_mnemonic,
+    group_prefix,
+    mnemonic_from_indices,
+)
 
 
 @click.group()
@@ -112,7 +117,7 @@ def create(
     else:
         passphrase_bytes = b""
 
-    mnemonics = shamir.generate_mnemonics(
+    mnemonics = generate_mnemonics(
         threshold, groups, secret_bytes, passphrase_bytes, exponent
     )
 
@@ -156,8 +161,8 @@ def recover(passphrase_prompt):
     groups = defaultdict(set)  # group idx : shares
 
     def make_group_prefix(idx):
-        fake_group_prefix = shamir.group_prefix(0, 0, idx, group_threshold, group_count)
-        group_word = shamir.mnemonic_from_indices(fake_group_prefix).split()[2]
+        fake_group_prefix = group_prefix(0, 0, idx, group_threshold, group_count)
+        group_word = mnemonic_from_indices(fake_group_prefix).split()[2]
         return " ".join(first_words + [group_word])
 
     def print_group_status(idx):
@@ -192,7 +197,7 @@ def recover(passphrase_prompt):
         try:
             mnemonic_str = click.prompt("Enter a recovery share")
             words = mnemonic_str.split()
-            data = MnemonicData(mnemonic_str, *shamir.decode_mnemonic(mnemonic_str))
+            data = MnemonicData(mnemonic_str, *decode_mnemonic(mnemonic_str))
 
             if first_words and first_words != words[:2]:
                 error("This mnemonic is not part of the current set. Please try again.")
@@ -206,7 +211,7 @@ def recover(passphrase_prompt):
             try:
                 all_data = set.union(*groups.values())
                 all_mnemonics = [m.str for m in all_data]
-                master_secret = shamir.combine_mnemonics(all_mnemonics)
+                master_secret = combine_mnemonics(all_mnemonics)
                 break
             except MnemonicError:
                 pass
@@ -233,7 +238,7 @@ def recover(passphrase_prompt):
                 break
             except UnicodeDecodeError:
                 click.echo("Passphrase must be ASCII. Please try again.")
-        master_secret = shamir.combine_mnemonics(all_mnemonics, passphrase_bytes)
+        master_secret = combine_mnemonics(all_mnemonics, passphrase_bytes)
 
     click.echo(f"Your master secret is: {master_secret.hex()}")
 

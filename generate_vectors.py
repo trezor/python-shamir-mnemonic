@@ -2,16 +2,17 @@
 import json
 import random
 
-from shamir_mnemonic import ShamirMnemonic
+import shamir_mnemonic as shamir
 
 
 def random_bytes(n):
     return bytes(random.randrange(256) for _ in range(n))
 
+shamir.RANDOM_BYTES = random_bytes
+
 
 if __name__ == "__main__":
     output = []
-    shamir = ShamirMnemonic(random_bytes)
     random.seed(1337)
 
     for n in [16, 32]:
@@ -27,13 +28,13 @@ if __name__ == "__main__":
         output.append(([mnemonic], ""))
 
         # Mnemonic with invalid padding.
-        overflowing_bits = (8 * n) % ShamirMnemonic.RADIX_BITS
+        overflowing_bits = (8 * n) % shamir.RADIX_BITS
         if overflowing_bits:
             indices = list(shamir.mnemonic_to_indices(groups[0][0]))
             indices[4] += 1 << overflowing_bits
-            indices = tuple(indices[: -ShamirMnemonic.CHECKSUM_LENGTH_WORDS])
+            indices = tuple(indices[: -shamir.CHECKSUM_LENGTH_WORDS])
             mnemonic = shamir.mnemonic_from_indices(
-                indices + ShamirMnemonic.rs1024_create_checksum(indices)
+                indices + shamir.rs1024_create_checksum(indices)
             )
             output.append(([mnemonic], ""))
 
@@ -128,14 +129,14 @@ if __name__ == "__main__":
         output.append((mnemonics, secret.hex()))
 
     # Mnemonic with insufficient length.
-    secret = random_bytes((ShamirMnemonic.MIN_STRENGTH_BITS // 8) - 2)
-    identifier = random.randrange(1 << ShamirMnemonic.ID_LENGTH_BITS)
+    secret = random_bytes((shamir.MIN_STRENGTH_BITS // 8) - 2)
+    identifier = random.randrange(1 << shamir.ID_LENGTH_BITS)
     mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 1, 0, 1, secret)
     output.append(([mnemonic], ""))
 
     # Mnemonic with invalid length. The length of the master secret is not a multiple of 16 bits.
-    secret = b"\xff" + random_bytes(ShamirMnemonic.MIN_STRENGTH_BITS // 8)
-    identifier = random.randrange(1 << ShamirMnemonic.ID_LENGTH_BITS)
+    secret = b"\xff" + random_bytes(shamir.MIN_STRENGTH_BITS // 8)
+    identifier = random.randrange(1 << shamir.ID_LENGTH_BITS)
     mnemonic = shamir.encode_mnemonic(identifier, 0, 0, 1, 1, 0, 1, secret)
     output.append(([mnemonic], ""))
 
