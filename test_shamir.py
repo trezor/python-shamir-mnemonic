@@ -72,6 +72,24 @@ def test_group_sharing():
         shamir.combine_mnemonics(mnemonics[0][1:4])
 
 
+def test_invalid_sharing():
+    # Short master secret.
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(1, [(2, 3)], MS[:14])
+
+    # Odd length master secret.
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(1, [(2, 3)], MS + b"X")
+
+    # Group threshold exceeds number of groups.
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(3, [(3, 5), (2, 5)], MS)
+
+    # Group with multiple members and threshold 1.
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(2, [(3, 5), (1, 3), (2, 5)], MS)
+
+
 def test_vectors():
     with open("vectors.json", "r") as f:
         vectors = json.load(f)
