@@ -545,6 +545,9 @@ def generate_mnemonics(
             )
         )
 
+    if any(m == 1 and n > 1 for m, n in groups):
+        raise ValueError("1-of-X groups are not allowed, use 1-of-1 group instead.")
+
     encrypted_master_secret = _encrypt(
         master_secret, passphrase, iteration_exponent, identifier
     )
