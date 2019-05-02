@@ -43,20 +43,8 @@ def cli():
 @click.option(
     "-S", "--master-secret", help="Hex-encoded custom master secret", metavar="HEX"
 )
-@click.option(
-    "-p", "password_prompt", help="Prompt for passphrase for recovery", is_flag=True
-)
-@click.option("--password", help="Supply passphrase for recovery")
-def create(
-    scheme,
-    groups,
-    threshold,
-    exponent,
-    master_secret,
-    password,
-    password_prompt,
-    strength,
-):
+@click.option("-p", "--passphrase", help="Supply passphrase for recovery")
+def create(scheme, groups, threshold, exponent, master_secret, passphrase, strength):
     """Create a Shamir mnemonic set
     
     SCHEME can be one of:
@@ -70,12 +58,9 @@ def create(
             Keep the master for yourself, give the 5 shares to trusted friends.
     custom: Specify configuration with -g arguments.
     """
-    if password_prompt and password:
-        raise click.ClickException("Use only one of: -p, --password")
-
-    if (password_prompt or password) and not master_secret:
+    if passphrase and not master_secret:
         raise click.ClickException(
-            "Only use password in conjunction with an explicit master secret"
+            "Only use passphrase in conjunction with an explicit master secret"
         )
 
     if scheme == "single":
@@ -109,13 +94,9 @@ def create(
     secret_hex = style(secret_bytes.hex(), bold=True)
     click.echo(f"Using master secret: {secret_hex}")
 
-    if password_prompt:
-        password = click.prompt(
-            "Enter passphrase", hide_input=True, confirmation_prompt=True
-        )
-    if password:
+    if passphrase:
         try:
-            passphrase_bytes = password.encode("ascii")
+            passphrase_bytes = passphrase.encode("ascii")
         except UnicodeDecodeError:
             raise click.ClickException("Passphrase must be ASCII only")
     else:
@@ -156,7 +137,7 @@ def error(s):
 
 @cli.command()
 @click.option(
-    "-p", "passphrase_prompt", is_flag=True, help="Use passphrase after recovering"
+    "-p", "--passphrase-prompt", is_flag=True, help="Use passphrase after recovering"
 )
 def recover(passphrase_prompt):
     first_words = None
