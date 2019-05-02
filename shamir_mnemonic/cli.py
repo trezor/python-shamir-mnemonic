@@ -84,6 +84,11 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
     else:
         raise click.ClickException(f"Unknown scheme: {scheme}")
 
+    if any(m == 1 and n > 1 for m, n in groups):
+        click.echo("1-of-X groups are not allowed.")
+        click.echo("Instead, set up a 1-of-1 group and give everyone the same share.")
+        sys.exit(1)
+
     if master_secret is not None:
         try:
             secret_bytes = bytes.fromhex(master_secret)
