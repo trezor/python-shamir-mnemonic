@@ -63,6 +63,9 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
             "Only use passphrase in conjunction with an explicit master secret"
         )
 
+    if (groups or threshold != 1) and scheme != "custom":
+        raise click.BadArgumentUsage(f"To use -g/-t, you must select 'custom' scheme.")
+
     if scheme == "single":
         threshold = 1
         groups = [(1, 1)]
