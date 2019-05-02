@@ -60,10 +60,10 @@ if __name__ == "__main__":
         output.append((mnemonics, ""))
 
         # Mnemonics with mismatching group thresholds.
-        groups = shamir.generate_mnemonics_random(2, [(1, 3), (2, 2)])
-        data = list(shamir.decode_mnemonic(groups[0][2]))
+        groups = shamir.generate_mnemonics_random(2, [(1, 1), (2, 2)])
+        data = list(shamir.decode_mnemonic(groups[0][0]))
         data[3] = 1  # change group threshold from 2 to 1
-        mnemonics = [shamir.encode_mnemonic(*data)] + groups[1]
+        mnemonics = groups[1] + [shamir.encode_mnemonic(*data)]
         output.append((mnemonics, ""))
 
         # Mnemonics with mismatching group counts.
