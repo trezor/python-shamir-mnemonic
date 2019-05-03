@@ -1,4 +1,6 @@
 import json
+from itertools import combinations
+from random import shuffle
 
 import pytest
 
@@ -10,14 +12,14 @@ MS = b"ABCDEFGHIJKLMNOP"
 
 def test_basic_sharing_random():
     mnemonics = shamir.generate_mnemonics_random(1, [(3, 5)])[0]
-    assert shamir.combine_mnemonics(mnemonics) == shamir.combine_mnemonics(
-        mnemonics[1:4]
+    assert shamir.combine_mnemonics(mnemonics[:3]) == shamir.combine_mnemonics(
+        mnemonics[2:]
     )
 
 
 def test_basic_sharing_fixed():
     mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS)[0]
-    assert MS == shamir.combine_mnemonics(mnemonics)
+    assert MS == shamir.combine_mnemonics(mnemonics[:3])
     assert MS == shamir.combine_mnemonics(mnemonics[1:4])
     with pytest.raises(MnemonicError):
         shamir.combine_mnemonics(mnemonics[1:3])
@@ -40,12 +42,20 @@ def test_iteration_exponent():
 
 
 def test_group_sharing():
-    mnemonics = shamir.generate_mnemonics(2, [(3, 5), (2, 3), (2, 5), (1, 1)], MS)
-
-    # All mnemonics.
-    assert MS == shamir.combine_mnemonics(
-        [mnemonic for group in mnemonics for mnemonic in group]
+    group_threshold = 2
+    group_sizes = (5, 3, 5, 1)
+    member_thresholds = (3, 2, 2, 1)
+    mnemonics = shamir.generate_mnemonics(
+        group_threshold, list(zip(member_thresholds, group_sizes)), MS
     )
+
+    # Test all valid combinations of mnemonics.
+    for groups in combinations(zip(mnemonics, member_thresholds), group_threshold):
+        for group1_subset in combinations(groups[0][0], groups[0][1]):
+            for group2_subset in combinations(groups[1][0], groups[1][1]):
+                mnemonic_subset = list(group1_subset + group2_subset)
+                shuffle(mnemonic_subset)
+                assert MS == shamir.combine_mnemonics(mnemonic_subset)
 
     # Minimal sets of mnemonics.
     assert MS == shamir.combine_mnemonics(
@@ -53,14 +63,6 @@ def test_group_sharing():
     )
     assert MS == shamir.combine_mnemonics(
         [mnemonics[2][3], mnemonics[3][0], mnemonics[2][4]]
-    )
-
-    # Two complete groups and one incomplete group.
-    assert MS == shamir.combine_mnemonics(
-        mnemonics[0] + [mnemonics[1][1]] + mnemonics[2]
-    )
-    assert MS == shamir.combine_mnemonics(
-        mnemonics[0][1:4] + mnemonics[1][1:3] + mnemonics[2][2:4]
     )
 
     # One complete group and one incomplete group out of two groups required.

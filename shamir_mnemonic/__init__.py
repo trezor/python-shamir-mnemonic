@@ -288,9 +288,7 @@ def _create_digest(random_data, shared_secret):
 def _split_secret(threshold, share_count, shared_secret):
     if threshold < 1:
         raise ValueError(
-            "The requested threshold ({}) must be a positive integer.".format(
-                threshold
-            )
+            "The requested threshold ({}) must be a positive integer.".format(threshold)
         )
 
     if threshold > share_count:
@@ -666,25 +664,27 @@ def combine_mnemonics(mnemonics, passphrase=b""):
             )
         )
 
-    # Remove the groups, where the number of shares is below the member threshold.
-    bad_groups = {
-        group_index: group
-        for group_index, group in groups.items()
-        if len(group[1]) < group[0]
-    }
-    for group_index in bad_groups:
-        groups.pop(group_index)
-
-    if len(groups) < group_threshold:
-        group_index, group = next(iter(bad_groups.items()))
-        prefix = group_prefix(
-            identifier, iteration_exponent, group_index, group_threshold, group_count
-        )
+    if len(groups) != group_threshold:
         raise MnemonicError(
-            'Insufficient number of mnemonics. At least {} mnemonics starting with "{} ..." are required.'.format(
-                group[0], mnemonic_from_indices(prefix)
+            "Wrong number of mnemonic groups. Expected {} groups, but {} were provided.".format(
+                group_threshold, len(groups)
             )
         )
+
+    for group_index, group in groups.items():
+        if len(group[1]) != group[0]:
+            prefix = group_prefix(
+                identifier,
+                iteration_exponent,
+                group_index,
+                group_threshold,
+                group_count,
+            )
+            raise MnemonicError(
+                'Wrong number of mnemonics. Expected {} mnemonics starting with "{} ...", but {} were provided.'.format(
+                    group[0], mnemonic_from_indices(prefix), len(group[1])
+                )
+            )
 
     group_shares = [
         (group_index, _recover_secret(group[0], group[1]))

@@ -1,18 +1,12 @@
 import os
-from collections import defaultdict, namedtuple
 import sys
+from collections import defaultdict, namedtuple
 
 import click
 from click import style
 
-from . import (
-    MnemonicError,
-    generate_mnemonics,
-    combine_mnemonics,
-    decode_mnemonic,
-    group_prefix,
-    mnemonic_from_indices,
-)
+from . import (MnemonicError, combine_mnemonics, decode_mnemonic,
+               generate_mnemonics, group_prefix, mnemonic_from_indices)
 
 
 @click.group()

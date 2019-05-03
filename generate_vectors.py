@@ -8,6 +8,7 @@ import shamir_mnemonic as shamir
 def random_bytes(n):
     return bytes(random.randrange(256) for _ in range(n))
 
+
 shamir.RANDOM_BYTES = random_bytes
 
 
@@ -41,7 +42,6 @@ if __name__ == "__main__":
         # Basic sharing 2-of-3.
         secret = random_bytes(n)
         groups = shamir.generate_mnemonics(1, [(2, 3)], secret, b"TREZOR", 2)
-        output.append((random.sample(groups[0], 3), secret.hex()))
         output.append((random.sample(groups[0], 2), secret.hex()))
         output.append((random.sample(groups[0], 1), ""))
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         groups = shamir.generate_mnemonics_random(1, [(2, 3)])
         data = list(shamir.decode_mnemonic(groups[0][0]))
         data[5] = 2  # change member index from 0 to 2
-        mnemonics = [shamir.encode_mnemonic(*data)] + groups[0][1:]
+        mnemonics = [shamir.encode_mnemonic(*data), groups[0][2]]
         output.append((mnemonics, ""))
 
         # Mnemonics with mismatching member thresholds.
@@ -121,12 +121,12 @@ if __name__ == "__main__":
         mnemonics = random.sample(groups[2], 3) + random.sample(groups[3], 2)
         random.shuffle(mnemonics)
         output.append((mnemonics, secret.hex()))
-        output.append(([groups[1][0], groups[0][0]], secret.hex()))
 
-        # All mnemonics.
-        mnemonics = [mnemonic for group in groups for mnemonic in group]
+        mnemonics = groups[1] + random.sample(groups[3], 2)
         random.shuffle(mnemonics)
         output.append((mnemonics, secret.hex()))
+
+        output.append(([groups[1][0], groups[0][0]], secret.hex()))
 
     # Mnemonic with insufficient length.
     secret = random_bytes((shamir.MIN_STRENGTH_BITS // 8) - 2)
