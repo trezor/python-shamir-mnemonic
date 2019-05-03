@@ -286,13 +286,19 @@ def _create_digest(random_data, shared_secret):
 
 
 def _split_secret(threshold, share_count, shared_secret):
-    assert 0 < threshold <= share_count <= MAX_SHARE_COUNT
+    if threshold < 1:
+        raise ValueError(
+            "The requested threshold ({}) must be a positive integer.".format(
+                threshold
+            )
+        )
 
-    # If the threshold is 1, then the digest of the shared secret is not used.
-    if threshold == 1:
-        return [(i, shared_secret) for i in range(share_count)]
-
-    random_share_count = threshold - 2
+    if threshold > share_count:
+        raise ValueError(
+            "The requested threshold ({}) must not exceed the number of shares ({}).".format(
+                threshold, share_count
+            )
+        )
 
     if share_count > MAX_SHARE_COUNT:
         raise ValueError(
@@ -300,6 +306,12 @@ def _split_secret(threshold, share_count, shared_secret):
                 share_count, MAX_SHARE_COUNT
             )
         )
+
+    # If the threshold is 1, then the digest of the shared secret is not used.
+    if threshold == 1:
+        return [(0, shared_secret)]
+
+    random_share_count = threshold - 2
 
     shares = [(i, RANDOM_BYTES(len(shared_secret))) for i in range(random_share_count)]
 
@@ -318,16 +330,17 @@ def _split_secret(threshold, share_count, shared_secret):
 
 
 def _recover_secret(threshold, shares):
-    shared_secret = _interpolate(shares, SECRET_INDEX)
-
     # If the threshold is 1, then the digest of the shared secret is not used.
-    if threshold != 1:
-        digest_share = _interpolate(shares, DIGEST_INDEX)
-        digest = digest_share[:DIGEST_LENGTH_BYTES]
-        random_part = digest_share[DIGEST_LENGTH_BYTES:]
+    if threshold == 1:
+        return next(iter(shares))[1]
 
-        if digest != _create_digest(random_part, shared_secret):
-            raise MnemonicError("Invalid digest of the shared secret.")
+    shared_secret = _interpolate(shares, SECRET_INDEX)
+    digest_share = _interpolate(shares, DIGEST_INDEX)
+    digest = digest_share[:DIGEST_LENGTH_BYTES]
+    random_part = digest_share[DIGEST_LENGTH_BYTES:]
+
+    if digest != _create_digest(random_part, shared_secret):
+        raise MnemonicError("Invalid digest of the shared secret.")
 
     return shared_secret
 
@@ -397,7 +410,8 @@ def decode_mnemonic(mnemonic):
             "must be at least {} words.".format(MIN_MNEMONIC_LENGTH_WORDS)
         )
 
-    if (RADIX_BITS * (len(mnemonic_data) - METADATA_LENGTH_WORDS)) % 16 > 8:
+    padding_len = (RADIX_BITS * (len(mnemonic_data) - METADATA_LENGTH_WORDS)) % 16
+    if padding_len > 8:
         raise MnemonicError("Invalid mnemonic length.")
 
     if not rs1024_verify_checksum(mnemonic_data):
@@ -425,9 +439,7 @@ def decode_mnemonic(mnemonic):
             )
         )
 
-    # The length of the master secret in bytes is required to be even, so find the largest even
-    # integer, which is less than or equal to value_word_count * 10 / 8.
-    value_byte_count = 2 * ((len(value_data) * 5) // 8)
+    value_byte_count = bits_to_bytes(RADIX_BITS * len(value_data) - padding_len)
     value_int = _int_from_indices(value_data)
 
     try:
@@ -538,6 +550,11 @@ def generate_mnemonics(
             "The length of the master secret in bytes must be an even number."
         )
 
+    if not all(32 <= c <= 126 for c in passphrase):
+        raise ValueError(
+            "The passphrase must contain only printable ASCII characters (code points 32-126)."
+        )
+
     if group_threshold > len(groups):
         raise ValueError(
             "The requested group threshold ({}) must not exceed the number of groups ({}).".format(
@@ -545,8 +562,13 @@ def generate_mnemonics(
             )
         )
 
-    if any(m == 1 and n > 1 for m, n in groups):
-        raise ValueError("1-of-X groups are not allowed, use 1-of-1 group instead.")
+    if any(
+        member_threshold == 1 and member_count > 1
+        for member_threshold, member_count in groups
+    ):
+        raise ValueError(
+            "Creating multiple member shares with member threshold 1 is not allowed. Use 1-of-1 member sharing instead."
+        )
 
     encrypted_master_secret = _encrypt(
         master_secret, passphrase, iteration_exponent, identifier

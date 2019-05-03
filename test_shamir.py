@@ -85,6 +85,18 @@ def test_invalid_sharing():
     with pytest.raises(ValueError):
         shamir.generate_mnemonics(3, [(3, 5), (2, 5)], MS)
 
+    # Invalid group threshold.
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(0, [(3, 5), (2, 5)], MS)
+
+    # Member threshold exceeds number of members.
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(2, [(3, 2), (2, 5)], MS)
+
+    # Invalid member threshold.
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(2, [(0, 2), (2, 5)], MS)
+
     # Group with multiple members and threshold 1.
     with pytest.raises(ValueError):
         shamir.generate_mnemonics(2, [(3, 5), (1, 3), (2, 5)], MS)
