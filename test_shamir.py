@@ -107,11 +107,16 @@ def test_invalid_sharing():
 def test_vectors():
     with open("vectors.json", "r") as f:
         vectors = json.load(f)
-    for mnemonics, secret in vectors:
+    for description, mnemonics, secret in vectors:
         if secret:
             assert bytes.fromhex(secret) == shamir.combine_mnemonics(
                 mnemonics, b"TREZOR"
-            )
+            ), 'Incorrect secret for test vector "{}".'.format(description)
         else:
             with pytest.raises(MnemonicError):
                 shamir.combine_mnemonics(mnemonics)
+                pytest.fail(
+                    'Failed to raise exception for test vector "{}".'.format(
+                        description
+                    )
+                )
