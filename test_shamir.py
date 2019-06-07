@@ -74,6 +74,30 @@ def test_group_sharing():
         shamir.combine_mnemonics(mnemonics[0][1:4])
 
 
+def test_group_sharing_threshold_1():
+    group_threshold = 1
+    group_sizes = (5, 3, 5, 1)
+    member_thresholds = (3, 2, 2, 1)
+    mnemonics = shamir.generate_mnemonics(
+        group_threshold, list(zip(member_thresholds, group_sizes)), MS
+    )
+
+    # Test all valid combinations of mnemonics.
+    for groups in combinations(zip(mnemonics, member_thresholds), group_threshold):
+        for group1_subset in combinations(groups[0][0], groups[0][1]):
+            mnemonic_subset = list(group1_subset)
+            shuffle(mnemonic_subset)
+            assert MS == shamir.combine_mnemonics(mnemonic_subset)
+
+    # Minimal sets of mnemonics.
+    assert MS == shamir.combine_mnemonics(
+        [mnemonics[2][0], mnemonics[2][2]]
+    )
+    assert MS == shamir.combine_mnemonics(
+        [mnemonics[3][0]]
+    )
+
+
 def test_invalid_sharing():
     # Short master secret.
     with pytest.raises(ValueError):
