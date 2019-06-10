@@ -307,7 +307,7 @@ def _split_secret(threshold, share_count, shared_secret):
 
     # If the threshold is 1, then the digest of the shared secret is not used.
     if threshold == 1:
-        return [(0, shared_secret)]
+        return [(i, shared_secret) for i in range(share_count)]
 
     random_share_count = threshold - 2
 
@@ -573,10 +573,6 @@ def generate_mnemonics(
     )
 
     group_shares = _split_secret(group_threshold, len(groups), encrypted_master_secret)
-
-    if group_threshold == 1 and len(groups) > 1:
-        group_secret = group_shares[0][1]
-        group_shares = [(i, group_secret) for i in range(len(groups))]
 
     return [
         [
