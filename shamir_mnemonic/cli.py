@@ -23,21 +23,20 @@ def cli():
     type=(int, int),
     metavar="T N",
     multiple=True,
-    help="Add a T-of-N group to the collection",
+    help="Add a T-of-N group to the custom scheme.",
 )
 @click.option(
     "-t",
     "--threshold",
     type=int,
-    default=1,
-    help="Number of groups required for recovery",
+    help="Number of groups required for recovery in the custom scheme.",
 )
-@click.option("-E", "--exponent", type=int, default=0, help="Iteration exponent")
-@click.option("-s", "--strength", type=int, default=128, help="Secret strength in bits")
+@click.option("-E", "--exponent", type=int, default=0, help="Iteration exponent.")
+@click.option("-s", "--strength", type=int, default=128, help="Secret strength in bits.")
 @click.option(
-    "-S", "--master-secret", help="Hex-encoded custom master secret", metavar="HEX"
+    "-S", "--master-secret", help="Hex-encoded custom master secret.", metavar="HEX"
 )
-@click.option("-p", "--passphrase", help="Supply passphrase for recovery")
+@click.option("-p", "--passphrase", help="Supply passphrase for recovery.")
 def create(scheme, groups, threshold, exponent, master_secret, passphrase, strength):
     """Create a Shamir mnemonic set
     
@@ -50,14 +49,14 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
     master: Create 1 master share that can recover the seed by itself,
             plus a 3-of-5 group: 5 shares, with 3 required for recovery.
             Keep the master for yourself, give the 5 shares to trusted friends.
-    custom: Specify configuration with -g arguments.
+    custom: Specify configuration with -t and -g options.
     """
     if passphrase and not master_secret:
         raise click.ClickException(
             "Only use passphrase in conjunction with an explicit master secret"
         )
 
-    if (groups or threshold != 1) and scheme != "custom":
+    if (groups or threshold != None) and scheme != "custom":
         raise click.BadArgumentUsage(f"To use -g/-t, you must select 'custom' scheme.")
 
     if scheme == "single":
@@ -74,7 +73,10 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
         except Exception as e:
             raise click.BadArgumentUsage(f"Invalid scheme: {scheme}") from e
     elif scheme == "custom":
-        pass
+        if threshold is None:
+            raise click.BadArgumentUsage(f"Use '-t' to specify the number of groups required for recovery.")
+        if not groups:
+            raise click.BadArgumentUsage(f"Use '-g T N' to add a T-of-N group to the collection.")
     else:
         raise click.ClickException(f"Unknown scheme: {scheme}")
 
