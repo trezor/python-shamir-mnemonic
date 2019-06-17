@@ -55,3 +55,8 @@ command:
 .. code-block:: console
 
     $ python3 -m shamir_mnemonic.cli
+
+Test vectors
+------------
+
+The test vectors in vectors.json are given as a list of triples. The first member of the triple is a description of the test vector, the second member is a list of mnemonics and the third member is the master secret which results from combining the mnemonics. The master secret is encoded as a string containing two hexadecimal digits for each byte. If the string is empty, then attempting to combine the given set of mnemonics should result in error. The passphrase "TREZOR" is used for all valid sets of mnemonics.
