@@ -32,7 +32,9 @@ def cli():
     help="Number of groups required for recovery in the custom scheme.",
 )
 @click.option("-E", "--exponent", type=int, default=0, help="Iteration exponent.")
-@click.option("-s", "--strength", type=int, default=128, help="Secret strength in bits.")
+@click.option(
+    "-s", "--strength", type=int, default=128, help="Secret strength in bits."
+)
 @click.option(
     "-S", "--master-secret", help="Hex-encoded custom master secret.", metavar="HEX"
 )
@@ -74,9 +76,13 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
             raise click.BadArgumentUsage(f"Invalid scheme: {scheme}") from e
     elif scheme == "custom":
         if threshold is None:
-            raise click.BadArgumentUsage(f"Use '-t' to specify the number of groups required for recovery.")
+            raise click.BadArgumentUsage(
+                "Use '-t' to specify the number of groups required for recovery."
+            )
         if not groups:
-            raise click.BadArgumentUsage(f"Use '-g T N' to add a T-of-N group to the collection.")
+            raise click.BadArgumentUsage(
+                "Use '-g T N' to add a T-of-N group to the collection."
+            )
     else:
         raise click.ClickException(f"Unknown scheme: {scheme}")
 

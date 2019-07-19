@@ -11,7 +11,7 @@ def random_bytes(n):
 
 def output(description, mnemonics, secret):
     output.i += 1
-    output.data.append(("{}. {}".format(output.i, description), mnemonics, secret.hex()))
+    output.data.append((f"{output.i}. {description}", mnemonics, secret.hex()))
 
 
 output.i = 0
