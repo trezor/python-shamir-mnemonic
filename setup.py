@@ -20,4 +20,12 @@ setup(
     install_requires=["click>=7,<8", "colorama"],
     package_data={"shamir_mnemonic": ["wordlist.txt"]},
     entry_points={"console_scripts": ["shamir=shamir_mnemonic.cli:cli"]},
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: MacOS :: MacOS X",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3 :: Only",
+    ],
 )
