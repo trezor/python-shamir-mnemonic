@@ -50,6 +50,28 @@ When the :code:`shamir_mnemonic` package is installed, you can use the :code:`sh
 
     $ shamir create 3of5   # create a 3-of-5 set of shares
 
+
+You can also supply your own seed entropy as a hexadecimal string:
+
+.. code-block:: console
+
+    $ shamir create --master-secret cb21904441dfd01a392701ecdc25d61c 3of5
+      Using master secret: cb21904441dfd01a392701ecdc25d61c
+      Group 1 of 1 - 3 of 5 shares required:
+      necklace away academic acne angel friar database have ecology recall exotic rapids birthday group fatal crisis explain tenant program roster
+      necklace away academic agree again thunder library desktop woman idle column impact owner fangs image union huge wrist quick pajamas
+      necklace away academic amazing dive damage mama pistol imply item type adult editor universe python welfare triumph curious texture elite
+      necklace away academic arcade diminish mustang coding visitor smirk rhythm literary season simple sugar method easel short deny year class
+      necklace away academic axle capture spider wolf grief busy epidemic both preach writing secret sidewalk quantity scramble wine wrap dismiss
+
+Recombine shares into the original secret like so:
+
+.. code-block:: console
+
+    $ shamir recover
+
+You will then be prompted for 3 of the 5 original shares.
+
 Use :code:`shamir --help` or :code:`shamir <command> --help` to get detailed help.
 
 If you want to run the CLI from a local checkout without installing, use the following
