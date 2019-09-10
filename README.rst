@@ -23,6 +23,15 @@ Specification
 See https://github.com/satoshilabs/slips/blob/master/slip-0039.md for full
 specification.
 
+Security
+--------
+
+This implementation is not using any hardening techniques. Secrets are passed in the
+open, and calculations are most likely trivially vulnerable to side-channel attacks.
+
+The purpose of this code is to verify correctness of other implementations. **It should
+not be used for handling sensitive secrets**.
+
 Installation
 ------------
 
@@ -41,16 +50,34 @@ From local checkout for development:
 CLI usage
 ---------
 
-CLI tool is included as a reference and UX testbed. It is **very obviously insecure**.
-DO NOT USE it for generating or decoding any sort of serious secrets.
+CLI tool is included as a reference and UX testbed.
 
-When the :code:`shamir_mnemonic` package is installed, you can use the :code:`shamir` command:
+**Warning:** this tool makes no attempt to protect sensitive data! Use at your own risk.
+If you need this to recover your wallet seeds, make sure to do it on an air-gapped
+computer, preferably running a live system such as Tails.
+
+When the :code:`shamir_mnemonic` package is installed, you can use the :code:`shamir`
+command:
 
 .. code-block:: console
 
     $ shamir create 3of5   # create a 3-of-5 set of shares
+    $ shamir recover       # interactively recombine shares to get the master secret
 
-Use :code:`shamir --help` or :code:`shamir <command> --help` to get detailed help.
+You can supply your own master secret as a hexadecimal string:
+
+.. code-block:: console
+
+    $ shamir create 3of5 --master-secret=cb21904441dfd01a392701ecdc25d61c
+
+You can specify a custom scheme. For example, to create three groups, with 2-of-3,
+2-of-5, and 4-of-5, and require completion of all three groups, use:
+
+.. code-block:: console
+
+    $ shamir create custom --threshold 3 --group 2 3 --group 2 5 --group 4 5
+
+Use :code:`shamir --help` or :code:`shamir create --help` to see all available options.
 
 If you want to run the CLI from a local checkout without installing, use the following
 command:
