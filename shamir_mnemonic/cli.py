@@ -214,16 +214,10 @@ def recover(passphrase_prompt):
         except Exception as e:
             error(str(e))
 
-    try:
-        all_data = set.union(*groups.values())
-        all_mnemonics = [m.str for m in all_data]
-        master_secret = combine_mnemonics(all_mnemonics)
-    except MnemonicError as e:
-        error(str(e))
-        click.echo("Recovery failed")
-        sys.exit(1)
+    all_data = set.union(*groups.values())
+    all_mnemonics = [m.str for m in all_data]
 
-    click.secho("SUCCESS!", fg="green", bold=True)
+    passphrase_bytes = b""
     if passphrase_prompt:
         while True:
             passphrase = click.prompt(
@@ -234,8 +228,14 @@ def recover(passphrase_prompt):
                 break
             except UnicodeDecodeError:
                 click.echo("Passphrase must be ASCII. Please try again.")
-        master_secret = combine_mnemonics(all_mnemonics, passphrase_bytes)
 
+    try:
+        master_secret = combine_mnemonics(all_mnemonics, passphrase_bytes)
+    except MnemonicError as e:
+        error(str(e))
+        click.echo("Recovery failed")
+        sys.exit(1)
+    click.secho("SUCCESS!", fg="green", bold=True)
     click.echo(f"Your master secret is: {master_secret.hex()}")
 
 
