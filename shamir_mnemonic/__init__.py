@@ -21,7 +21,8 @@
 
 import hashlib
 import hmac
-import os
+import os.path
+import secrets
 
 
 class MnemonicError(Exception):
@@ -85,7 +86,7 @@ SECRET_INDEX = 255
 DIGEST_INDEX = 254
 """The index of the share containing the digest of the shared secret."""
 
-RANDOM_BYTES = os.urandom
+RANDOM_BYTES = secrets.token_bytes
 """Source of random bytes. Can be overriden for deterministic testing."""
 
 

@@ -1,4 +1,4 @@
-import os
+import secrets
 import sys
 from collections import defaultdict, namedtuple
 
@@ -99,7 +99,7 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
                 "master_secret", f"Secret bytes must be hex encoded"
             ) from e
     else:
-        secret_bytes = os.urandom(strength // 8)
+        secret_bytes = secrets.token_bytes(strength // 8)
 
     secret_hex = style(secret_bytes.hex(), bold=True)
     click.echo(f"Using master secret: {secret_hex}")
