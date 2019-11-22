@@ -1,16 +1,20 @@
 import secrets
 import sys
-from collections import defaultdict, namedtuple
+from collections import defaultdict
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
+import attr
 import click
 from click import style
 
-from . import (MnemonicError, combine_mnemonics, decode_mnemonic,
-               generate_mnemonics, group_prefix, mnemonic_from_indices)
+from .constants import GROUP_PREFIX_LENGTH_WORDS
+from .shamir import combine_mnemonics, generate_mnemonics
+from .share import Share, decode_mnemonic
+from .utils import MnemonicError
 
 
 @click.group()
-def cli():
+def cli() -> None:
     pass
 
 
@@ -39,11 +43,19 @@ def cli():
     "-S", "--master-secret", help="Hex-encoded custom master secret.", metavar="HEX"
 )
 @click.option("-p", "--passphrase", help="Supply passphrase for recovery.")
-def create(scheme, groups, threshold, exponent, master_secret, passphrase, strength):
+def create(
+    scheme: str,
+    groups: Sequence[Tuple[int, int]],
+    threshold: int,
+    exponent: int,
+    master_secret: str,
+    passphrase: str,
+    strength: int,
+) -> None:
     """Create a Shamir mnemonic set
-    
+
     SCHEME can be one of:
-    
+
     \b
     single: Create a single recovery seed.
     2of3: Create 3 shares. Require 2 of them to recover the seed.
@@ -58,7 +70,7 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
             "Only use passphrase in conjunction with an explicit master secret"
         )
 
-    if (groups or threshold != None) and scheme != "custom":
+    if (groups or threshold is not None) and scheme != "custom":
         raise click.BadArgumentUsage(f"To use -g/-t, you must select 'custom' scheme.")
 
     if scheme == "single":
@@ -130,18 +142,12 @@ def create(scheme, groups, threshold, exponent, master_secret, passphrase, stren
             click.echo(g)
 
 
-MnemonicData = namedtuple(
-    "MnemonicData",
-    "str identifier exponent group_index group_threshold group_count index threshold value",
-)
-
-
 FINISHED = style("\u2713", fg="green", bold=True)
 EMPTY = style("\u2717", fg="red", bold=True)
 INPROGRESS = style("\u26ec", fg="yellow", bold=True)
 
 
-def error(s):
+def error(s: str) -> None:
     click.echo(style("ERROR: ", fg="red") + s)
 
 
@@ -149,18 +155,17 @@ def error(s):
 @click.option(
     "-p", "--passphrase-prompt", is_flag=True, help="Use passphrase after recovering"
 )
-def recover(passphrase_prompt):
-    first_words = None
-    group_threshold = None
-    group_count = None
-    groups = defaultdict(set)  # group idx : shares
+def recover(passphrase_prompt: bool) -> None:
+    last_share: Optional[Share] = None
+    all_mnemonics: List[str] = []
+    groups: Dict[int, Set[Share]] = defaultdict(set)  # group idx : shares
 
-    def make_group_prefix(idx):
-        fake_group_prefix = group_prefix(0, 0, idx, group_threshold, group_count)
-        group_word = mnemonic_from_indices(fake_group_prefix).split()[2]
-        return " ".join(first_words + [group_word])
+    def make_group_prefix(idx: int) -> str:
+        assert last_share is not None
+        fake_share = attr.evolve(last_share, group_index=idx)
+        return " ".join(fake_share.words()[:GROUP_PREFIX_LENGTH_WORDS])
 
-    def print_group_status(idx):
+    def print_group_status(idx: int) -> None:
         group = groups[idx]
         group_prefix = style(make_group_prefix(idx), bold=True)
         bi = style(str(len(group)), bold=True)
@@ -172,40 +177,43 @@ def recover(passphrase_prompt):
             bt = style(str(elem.threshold), bold=True)
             click.echo(f"{prefix} {bi} of {bt} shares needed from group {group_prefix}")
 
-    def group_is_complete(idx):
+    def group_is_complete(idx: int) -> bool:
         group = groups[idx]
         if not group:
             return False
         return len(group) >= next(iter(group)).threshold
 
-    def print_status():
+    def print_status() -> None:
+        assert last_share is not None
         n_completed = len([idx for idx in groups if group_is_complete(idx)])
         bn = style(str(n_completed), bold=True)
-        bt = style(str(group_threshold), bold=True)
+        bt = style(str(last_share.group_threshold), bold=True)
         click.echo()
-        if group_count > 1:
+        if last_share.group_count > 1:
             click.echo(f"Completed {bn} of {bt} groups needed:")
-        for i in range(group_count):
+        for i in range(last_share.group_count):
             print_group_status(i)
 
-    def set_is_complete():
+    def set_is_complete() -> bool:
+        assert last_share is not None
         n_completed = len([idx for idx in groups if group_is_complete(idx)])
-        return n_completed >= group_threshold
+        return n_completed >= last_share.group_threshold
 
-    while group_threshold is None or not set_is_complete():
+    while last_share is None or not set_is_complete():
         try:
             mnemonic_str = click.prompt("Enter a recovery share")
-            words = mnemonic_str.split()
-            data = MnemonicData(mnemonic_str, *decode_mnemonic(mnemonic_str))
+            share = decode_mnemonic(mnemonic_str)
 
-            if first_words and first_words != words[:2]:
+            if last_share is None:
+                last_share = share
+
+            if last_share.common_parameters() != share.common_parameters():
                 error("This mnemonic is not part of the current set. Please try again.")
 
-            first_words = words[:2]
-            group_threshold = data.group_threshold
-            group_count = data.group_count
-
-            groups[data.group_index].add(data)
+            else:
+                last_share = share
+                groups[share.group_index].add(share)
+                all_mnemonics.append(mnemonic_str)
 
             print_status()
 
@@ -213,9 +221,6 @@ def recover(passphrase_prompt):
             return
         except Exception as e:
             error(str(e))
-
-    all_data = set.union(*groups.values())
-    all_mnemonics = [m.str for m in all_data]
 
     passphrase_bytes = b""
     if passphrase_prompt:

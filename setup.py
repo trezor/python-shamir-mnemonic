@@ -4,6 +4,7 @@ from setuptools import setup
 
 # fmt: off
 REQUIREMENTS = [
+    "attrs",
     "click>=7,<8",
     "colorama",
 ]
