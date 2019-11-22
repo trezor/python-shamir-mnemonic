@@ -39,7 +39,7 @@ With pip from GitHub:
 
 .. code-block:: console
 
-    $ pip3 install https://github.com/trezor/python-shamir-mnemonic
+    $ pip3 install shamir-mnemonic
 
 From local checkout for development:
 
