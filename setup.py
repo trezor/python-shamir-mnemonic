@@ -18,7 +18,7 @@ with open(os.path.join(HERE, "README.rst"), encoding="utf-8") as f:
 
 setup(
     name="shamir-mnemonic",
-    version="0.1.0",
+    version="0.2.0",
     description="SLIP-39 Shamir Mnemonics",
     long_description=long_description,
     url="https://github.com/trezor/python-shamir-mnemonic",
