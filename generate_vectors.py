@@ -24,6 +24,11 @@ def decode_mnemonic(mnemonic):
     return list(attr.astuple(share.decode_mnemonic(mnemonic)))
 
 
+def generate_mnemonics_random(group_threshold, groups):
+    secret = random_bytes(16)
+    return shamir.generate_mnemonics(group_threshold, groups, secret)
+
+
 output.i = 0
 output.data = []
 
@@ -62,28 +67,28 @@ if __name__ == "__main__":
         output(description.format(8 * n), random.sample(groups[0], 1), b"")
 
         description = "Mnemonics with different identifiers ({} bits)"
-        groups = shamir.generate_mnemonics_random(1, [(2, 2)])
+        groups = generate_mnemonics_random(1, [(2, 2)])
         data = decode_mnemonic(groups[0][0])
         data[0] ^= 1  # modify the identifier
         mnemonics = [encode_mnemonic(*data), groups[0][1]]
         output(description.format(8 * n), mnemonics, b"")
 
         description = "Mnemonics with different iteration exponents ({} bits)"
-        groups = shamir.generate_mnemonics_random(1, [(2, 2)])
+        groups = generate_mnemonics_random(1, [(2, 2)])
         data = decode_mnemonic(groups[0][0])
         data[1] = 3  # change iteration exponent from 0 to 3
         mnemonics = [encode_mnemonic(*data), groups[0][1]]
         output(description.format(8 * n), mnemonics, b"")
 
         description = "Mnemonics with mismatching group thresholds ({} bits)"
-        groups = shamir.generate_mnemonics_random(2, [(1, 1), (2, 2)])
+        groups = generate_mnemonics_random(2, [(1, 1), (2, 2)])
         data = decode_mnemonic(groups[0][0])
         data[3] = 1  # change group threshold from 2 to 1
         mnemonics = groups[1] + [encode_mnemonic(*data)]
         output(description.format(8 * n), mnemonics, b"")
 
         description = "Mnemonics with mismatching group counts ({} bits)"
-        groups = shamir.generate_mnemonics_random(1, [(2, 2)])
+        groups = generate_mnemonics_random(1, [(2, 2)])
         data = decode_mnemonic(groups[0][0])
         data[4] = 3  # change group count from 1 to 3
         mnemonics = [encode_mnemonic(*data), groups[0][1]]
@@ -92,7 +97,7 @@ if __name__ == "__main__":
         description = (
             "Mnemonics with greater group threshold than group counts ({} bits)"
         )
-        groups = shamir.generate_mnemonics_random(2, [(2, 2), (1, 1)])
+        groups = generate_mnemonics_random(2, [(2, 2), (1, 1)])
         mnemonics = []
         for group in groups:
             for mnemonic in group:
@@ -102,21 +107,21 @@ if __name__ == "__main__":
         output(description.format(8 * n), mnemonics, b"")
 
         description = "Mnemonics with duplicate member indices ({} bits)"
-        groups = shamir.generate_mnemonics_random(1, [(2, 3)])
+        groups = generate_mnemonics_random(1, [(2, 3)])
         data = decode_mnemonic(groups[0][0])
         data[5] = 2  # change member index from 0 to 2
         mnemonics = [encode_mnemonic(*data), groups[0][2]]
         output(description.format(8 * n), mnemonics, b"")
 
         description = "Mnemonics with mismatching member thresholds ({} bits)"
-        groups = shamir.generate_mnemonics_random(1, [(2, 2)])
+        groups = generate_mnemonics_random(1, [(2, 2)])
         data = decode_mnemonic(groups[0][0])
         data[6] = 1  # change member threshold from 2 to 1
         mnemonics = [encode_mnemonic(*data), groups[0][1]]
         output(description.format(8 * n), mnemonics, b"")
 
         description = "Mnemonics giving an invalid digest ({} bits)"
-        groups = shamir.generate_mnemonics_random(1, [(2, 2)])
+        groups = generate_mnemonics_random(1, [(2, 2)])
         data = decode_mnemonic(groups[0][0])
         data[7] = bytes((data[7][0] ^ 1,)) + data[7][1:]  # modify the share value
         mnemonics = [encode_mnemonic(*data), groups[0][1]]

@@ -1,6 +1,7 @@
 import json
 from itertools import combinations
 from random import shuffle
+import secrets
 
 import pytest
 
@@ -11,7 +12,8 @@ MS = b"ABCDEFGHIJKLMNOP"
 
 
 def test_basic_sharing_random():
-    mnemonics = shamir.generate_mnemonics_random(1, [(3, 5)])[0]
+    secret = secrets.token_bytes(16)
+    mnemonics = shamir.generate_mnemonics(1, [(3, 5)], secret)[0]
     assert shamir.combine_mnemonics(mnemonics[:3]) == shamir.combine_mnemonics(
         mnemonics[2:]
     )
@@ -145,3 +147,23 @@ def test_vectors():
                         description
                     )
                 )
+
+
+def test_split_ems():
+    identifier = 42
+    exponent = 1
+    encrypted_master_secret = shamir.encrypt(MS, b"TREZOR", exponent, identifier)
+    mnemonics = shamir.split_ems(
+        1, [(3, 5)], identifier, exponent, encrypted_master_secret
+    )
+
+    recovered = shamir.combine_mnemonics(mnemonics[0][:3], b"TREZOR")
+    assert recovered == MS
+
+
+def test_recover_ems():
+    mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS, b"TREZOR")[0]
+
+    identifier, exponent, encrypted_master_secret = shamir.recover_ems(mnemonics[:3])
+    recovered = shamir.decrypt(encrypted_master_secret, b"TREZOR", exponent, identifier)
+    assert recovered == MS

@@ -1,7 +1,7 @@
 # flake8: noqa
 
 from .cipher import decrypt, encrypt
-from .shamir import combine_mnemonics, generate_mnemonics, generate_mnemonics_random
+from .shamir import combine_mnemonics, generate_mnemonics, split_ems, recover_ems
 from .utils import MnemonicError
 
 
@@ -10,6 +10,7 @@ __all__ = [
     "decrypt",
     "combine_mnemonics",
     "generate_mnemonics",
-    "generate_mnemonics_random",
+    "split_ems",
+    "recover_ems",
     "MnemonicError",
 ]

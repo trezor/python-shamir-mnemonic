@@ -217,51 +217,42 @@ def _decode_mnemonics(
     return all_group_params.pop(), groups
 
 
-def _random_identifier() -> int:
-    """Returns a random identifier with the given bit length."""
-    identifier = int.from_bytes(RANDOM_BYTES(bits_to_bytes(ID_LENGTH_BITS)), "big")
-    return identifier & ((1 << ID_LENGTH_BITS) - 1)
-
-
-def generate_mnemonics(
+def split_ems(
     group_threshold: int,
     groups: Sequence[Tuple[int, int]],
-    master_secret: bytes,
-    passphrase: bytes = b"",
-    iteration_exponent: int = 0,
+    identifier: int,
+    iteration_exponent: int,
+    encrypted_master_secret: bytes,
 ) -> List[List[str]]:
     """
-    Splits a master secret into mnemonic shares using Shamir's secret sharing scheme.
-    :param int group_threshold: The number of groups required to reconstruct the master secret.
+    Split an Encrypted Master Secret into mnemonic shares.
+
+    The input for this function is an *already encrypted* Master Secret (EMS).
+    Decryption of the MS depends on the identifier and iteration exponent, so if you are
+    splitting an EMS generated with `cipher.encrypt`, you need to use the same values
+    here. Otherwise it will be impossible to recover the original MS.
+
+    The intended usecase is to generate the EMS randomly:
+
+    1. Generate a random identifier and a random buffer, which will serve as the EMS.
+    2. Persist both values, and use `split_ems` to give the backup shares to the user.
+       Use `recover_ems` to get back the identifier and EMS in case storage is lost.
+    3. Every time an unencrypted MS is needed, prompt the user for a passphrase.
+    4. Different passphrases will yield different MS from the same backed-up data.
+
+    :param group_threshold: The number of groups required to reconstruct the master secret.
     :param groups: A list of (member_threshold, member_count) pairs for each group, where member_count
         is the number of shares to generate for the group and member_threshold is the number of members required to
         reconstruct the group secret.
-    :type groups: List of pairs of integers.
-    :param master_secret: The master secret to split.
-    :type master_secret: Array of bytes.
-    :param passphrase: The passphrase used to encrypt the master secret.
-    :type passphrase: Array of bytes.
-    :param int iteration_exponent: The iteration exponent.
+    :param identifier: A random identifier used when encrypting the EMS.
+    :param iteration_exponent: The encryption iteration exponent.
+    :param encrypted_master_secret: The master secret to split.
     :return: List of mnemonics.
-    :rtype: List of byte arrays.
     """
-
-    identifier = _random_identifier()
-
-    if len(master_secret) * 8 < MIN_STRENGTH_BITS:
+    if len(encrypted_master_secret) * 8 < MIN_STRENGTH_BITS:
         raise ValueError(
             "The length of the master secret must be "
             f"at least {bits_to_bytes(MIN_STRENGTH_BITS)} bytes."
-        )
-
-    if len(master_secret) % 2 != 0:
-        raise ValueError(
-            "The length of the master secret in bytes must be an even number."
-        )
-
-    if not all(32 <= c <= 126 for c in passphrase):
-        raise ValueError(
-            "The passphrase must contain only printable ASCII characters (code points 32-126)."
         )
 
     if group_threshold > len(groups):
@@ -277,10 +268,6 @@ def generate_mnemonics(
             "Creating multiple member shares with member threshold 1 is not allowed. "
             "Use 1-of-1 member sharing instead."
         )
-
-    encrypted_master_secret = cipher.encrypt(
-        master_secret, passphrase, iteration_exponent, identifier
-    )
 
     group_shares = _split_secret(group_threshold, len(groups), encrypted_master_secret)
 
@@ -306,76 +293,86 @@ def generate_mnemonics(
     ]
 
 
-def generate_mnemonics_random(
+def _random_identifier() -> int:
+    """Returns a random identifier with the given bit length."""
+    identifier = int.from_bytes(RANDOM_BYTES(bits_to_bytes(ID_LENGTH_BITS)), "big")
+    return identifier & ((1 << ID_LENGTH_BITS) - 1)
+
+
+def generate_mnemonics(
     group_threshold: int,
     groups: Sequence[Tuple[int, int]],
-    strength_bits: int = 128,
+    master_secret: bytes,
     passphrase: bytes = b"",
-    iteration_exponent: int = 0,
+    iteration_exponent: int = 1,
 ) -> List[List[str]]:
     """
-    Generates a random master secret and splits it into mnemonic shares using Shamir's secret
-    sharing scheme.
-    :param int group_threshold: The number of groups required to reconstruct the master secret.
+    Split a master secret into mnemonic shares using Shamir's secret sharing scheme.
+
+    The supplied Master Secret is encrypted by the passphrase (empty passphrase is used
+    if none is provided) and split into a set of mnemonic shares.
+
+    This is the user-friendly method to back up a pre-existing secret with the Shamir
+    scheme, optionally protected by a passphrase.
+
+    :param group_threshold: The number of groups required to reconstruct the master secret.
     :param groups: A list of (member_threshold, member_count) pairs for each group, where member_count
         is the number of shares to generate for the group and member_threshold is the number of members required to
         reconstruct the group secret.
-    :type groups: List of pairs of integers.
-    :param int strength_bits: The entropy of the randomly generated master secret in bits.
+    :param master_secret: The master secret to split.
     :param passphrase: The passphrase used to encrypt the master secret.
-    :type passphrase: Array of bytes.
-    :param int iteration_exponent: The iteration exponent.
+    :param int iteration_exponent: The encryption iteration exponent.
     :return: List of mnemonics.
-    :rtype: List of byte arrays.
     """
-
-    if strength_bits < MIN_STRENGTH_BITS:
+    if len(master_secret) % 2 != 0:
         raise ValueError(
-            "The requested strength of the master secret "
-            f"must be at least {MIN_STRENGTH_BITS} bits."
+            "The length of the master secret in bytes must be an even number."
         )
 
-    if strength_bits % 16 != 0:
+    if not all(32 <= c <= 126 for c in passphrase):
         raise ValueError(
-            "The requested strength of the master secret must be a multiple of 16 bits."
+            "The passphrase must contain only printable ASCII characters (code points 32-126)."
         )
 
-    return generate_mnemonics(
-        group_threshold,
-        groups,
-        RANDOM_BYTES(strength_bits // 8),
-        passphrase,
-        iteration_exponent,
+    identifier = _random_identifier()
+    encrypted_master_secret = cipher.encrypt(
+        master_secret, passphrase, iteration_exponent, identifier
+    )
+
+    return split_ems(
+        group_threshold, groups, identifier, iteration_exponent, encrypted_master_secret
     )
 
 
-def combine_mnemonics(mnemonics: Iterable[str], passphrase: bytes = b"") -> bytes:
+def recover_ems(mnemonics: Iterable[str]) -> Tuple[int, int, bytes]:
     """
-    Combines mnemonic shares to obtain the master secret which was previously split
-    using Shamir's secret sharing scheme.
+    Combine mnemonic shares, recover metadata and the Encrypted Master Secret.
+
+    This is a counterpart to `split_ems`, see its description for the intended usecase.
+    The function `recover_ems` returns the EMS itself and data required for its
+    decryption, except for the passphrase. With this data in persistent storage, it is
+    possible to prompt the user for a passphrase every time, and different passphrases
+    will yield different Master Secrets.
+
     :param mnemonics: List of mnemonics.
-    :type mnemonics: List of byte arrays.
-    :param passphrase: The passphrase used to encrypt the master secret.
-    :type passphrase: Array of bytes.
-    :return: The master secret.
-    :rtype: Array of bytes.
+    :return: Identifier, iteration exponent, and Encrypted Master Secret
     """
 
     if not mnemonics:
         raise MnemonicError("The list of mnemonics is empty.")
 
-    group_params, groups = _decode_mnemonics(mnemonics)
+    params, groups = _decode_mnemonics(mnemonics)
 
-    if len(groups) < group_params.group_threshold:
+    if len(groups) < params.group_threshold:
         raise MnemonicError(
             "Insufficient number of mnemonic groups. "
-            f"The required number of groups is {group_params.group_threshold}."
+            f"The required number of groups is {params.group_threshold}."
         )
 
-    if len(groups) != group_params.group_threshold:
+    if len(groups) != params.group_threshold:
         raise MnemonicError(
             "Wrong number of mnemonic groups. "
-            f"Expected {group_params.group_threshold} groups, "
+            f"Expected {params.group_threshold} groups, "
             f"but {len(groups)} were provided."
         )
 
@@ -394,9 +391,27 @@ def combine_mnemonics(mnemonics: Iterable[str], passphrase: bytes = b"") -> byte
         for group_index, group in groups.items()
     ]
 
+    encrypted_master_secret = _recover_secret(params.group_threshold, group_shares)
+    return params.identifier, params.iteration_exponent, encrypted_master_secret
+
+
+def combine_mnemonics(mnemonics: Iterable[str], passphrase: bytes = b"") -> bytes:
+    """
+    Combine mnemonic shares to obtain the master secret which was previously split
+    using Shamir's secret sharing scheme.
+
+    This is the user-friendly method to recover a backed-up secret optionally protected
+    by a passphrase.
+
+    :param mnemonics: List of mnemonics.
+    :param passphrase: The passphrase used to encrypt the master secret.
+    :return: The master secret.
+    """
+
+    if not mnemonics:
+        raise MnemonicError("The list of mnemonics is empty.")
+
+    identifier, iteration_exponent, encrypted_master_secret = recover_ems(mnemonics)
     return cipher.decrypt(
-        _recover_secret(group_params.group_threshold, group_shares),
-        passphrase,
-        group_params.iteration_exponent,
-        group_params.identifier,
+        encrypted_master_secret, passphrase, iteration_exponent, identifier,
     )
