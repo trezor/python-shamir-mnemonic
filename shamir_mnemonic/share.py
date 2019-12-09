@@ -64,7 +64,7 @@ class Share:
         ) + self.iteration_exponent
         return _int_to_word_indices(id_exp_int, ID_EXP_LENGTH_WORDS)
 
-    def _encode_group_params(self) -> List[WordIndex]:
+    def _encode_share_params(self) -> List[WordIndex]:
         # each value is 4 bits, for 20 bits total
         val = self.group_index
         val <<= 4
@@ -85,7 +85,7 @@ class Share:
         value_int = int.from_bytes(self.value, "big")
         value_data = _int_to_word_indices(value_int, value_word_count)
 
-        share_data = self._encode_id_exp() + self._encode_group_params() + value_data
+        share_data = self._encode_id_exp() + self._encode_share_params() + value_data
         checksum = rs1024.create_checksum(share_data)
 
         return list(wordlist.words_from_indices(share_data + checksum))
@@ -123,10 +123,10 @@ class Share:
         identifier = id_exp_int >> ITERATION_EXP_LENGTH_BITS
         iteration_exponent = id_exp_int & ((1 << ITERATION_EXP_LENGTH_BITS) - 1)
 
-        group_params_data = mnemonic_data[ID_EXP_LENGTH_WORDS : ID_EXP_LENGTH_WORDS + 2]
-        group_params_int = _int_from_word_indices(group_params_data)
-        group_params = int_to_indices(group_params_int, 5, 4)
-        group_index, group_threshold, group_count, index, threshold = group_params
+        share_params_data = mnemonic_data[ID_EXP_LENGTH_WORDS : ID_EXP_LENGTH_WORDS + 2]
+        share_params_int = _int_from_word_indices(share_params_data)
+        share_params = int_to_indices(share_params_int, 5, 4)
+        group_index, group_threshold, group_count, index, threshold = share_params
 
         if group_count < group_threshold:
             raise MnemonicError(
