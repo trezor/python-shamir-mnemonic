@@ -4,7 +4,8 @@ import random
 
 import attr
 
-from shamir_mnemonic import constants, rs1024, shamir, share, wordlist
+from shamir_mnemonic import constants, rs1024, shamir, wordlist
+from shamir_mnemonic.share import Share
 
 
 def random_bytes(n):
@@ -17,11 +18,11 @@ def output(description, mnemonics, secret):
 
 
 def encode_mnemonic(*args):
-    return share.Share(*args).encode()
+    return Share(*args).mnemonic()
 
 
 def decode_mnemonic(mnemonic):
-    return list(attr.astuple(share.decode_mnemonic(mnemonic)))
+    return list(attr.astuple(Share.from_mnemonic(mnemonic)))
 
 
 def generate_mnemonics_random(group_threshold, groups):

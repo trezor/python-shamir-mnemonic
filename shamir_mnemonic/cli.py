@@ -9,7 +9,7 @@ from click import style
 
 from .constants import GROUP_PREFIX_LENGTH_WORDS
 from .shamir import combine_mnemonics, generate_mnemonics
-from .share import Share, decode_mnemonic
+from .share import Share
 from .utils import MnemonicError
 
 
@@ -202,7 +202,7 @@ def recover(passphrase_prompt: bool) -> None:
     while last_share is None or not set_is_complete():
         try:
             mnemonic_str = click.prompt("Enter a recovery share")
-            share = decode_mnemonic(mnemonic_str)
+            share = Share.from_mnemonic(mnemonic_str)
 
             if last_share is None:
                 last_share = share

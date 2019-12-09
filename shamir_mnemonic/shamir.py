@@ -34,7 +34,7 @@ from .constants import (
     MIN_STRENGTH_BITS,
     SECRET_INDEX,
 )
-from .share import Share, ShareSetParameters, decode_mnemonic
+from .share import Share, ShareSetParameters
 from .utils import MnemonicError, bits_to_bytes
 
 
@@ -195,7 +195,7 @@ def _decode_mnemonics(
     all_group_params = set()
     groups: Dict[int, ShamirGroup] = {}
     for mnemonic in mnemonics:
-        share = decode_mnemonic(mnemonic)
+        share = Share.from_mnemonic(mnemonic)
         all_group_params.add(share.common_parameters())
         group = groups.setdefault(
             share.group_index, ShamirGroup(share.threshold, set())
@@ -282,7 +282,7 @@ def split_ems(
                 member_index,
                 member_threshold,
                 value,
-            ).encode()
+            ).mnemonic()
             for member_index, value in _split_secret(
                 member_threshold, member_count, group_secret
             )
