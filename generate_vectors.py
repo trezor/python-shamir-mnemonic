@@ -27,7 +27,9 @@ def decode_mnemonic(mnemonic):
 
 def generate_mnemonics_random(group_threshold, groups):
     secret = random_bytes(16)
-    return shamir.generate_mnemonics(group_threshold, groups, secret)
+    return shamir.generate_mnemonics(
+        group_threshold, groups, secret, iteration_exponent=0
+    )
 
 
 output.i = 0
@@ -41,7 +43,9 @@ if __name__ == "__main__":
     for n in [16, 32]:
         description = "Valid mnemonic without sharing ({} bits)"
         secret = random_bytes(n)
-        groups = shamir.generate_mnemonics(1, [(1, 1)], secret, b"TREZOR")
+        groups = shamir.generate_mnemonics(
+            1, [(1, 1)], secret, b"TREZOR", iteration_exponent=0
+        )
         output(description.format(8 * n), groups[0], secret)
 
         description = "Mnemonic with invalid checksum ({} bits)"
@@ -131,7 +135,7 @@ if __name__ == "__main__":
         # Group sharing.
         secret = random_bytes(n)
         groups = shamir.generate_mnemonics(
-            2, [(1, 1), (1, 1), (3, 5), (2, 6)], secret, b"TREZOR"
+            2, [(1, 1), (1, 1), (3, 5), (2, 6)], secret, b"TREZOR", iteration_exponent=0
         )
 
         description = "Insufficient number of groups ({} bits, case {})"
