@@ -244,10 +244,10 @@ def split_ems(
     :param groups: A list of (member_threshold, member_count) pairs for each group, where member_count
         is the number of shares to generate for the group and member_threshold is the number of members required to
         reconstruct the group secret.
-    :param identifier: A random identifier used when encrypting the EMS.
+    :param identifier: The identifier used when encrypting the master secret.
     :param iteration_exponent: The encryption iteration exponent.
-    :param encrypted_master_secret: The master secret to split.
-    :return: List of mnemonics.
+    :param encrypted_master_secret: The encrypted master secret to split.
+    :return: List of groups of mnemonics.
     """
     if len(encrypted_master_secret) * 8 < MIN_STRENGTH_BITS:
         raise ValueError(
@@ -322,7 +322,7 @@ def generate_mnemonics(
     :param master_secret: The master secret to split.
     :param passphrase: The passphrase used to encrypt the master secret.
     :param int iteration_exponent: The encryption iteration exponent.
-    :return: List of mnemonics.
+    :return: List of groups mnemonics.
     """
     if not all(32 <= c <= 126 for c in passphrase):
         raise ValueError(
@@ -373,7 +373,7 @@ def recover_ems(mnemonics: Iterable[str]) -> Tuple[int, int, bytes]:
 
     for threshold, shares in groups.values():
         if len(shares) != threshold:
-            share_words = shares.pop().words()
+            share_words = next(iter(shares)).words()
             prefix = " ".join(share_words[:GROUP_PREFIX_LENGTH_WORDS])
             raise MnemonicError(
                 "Wrong number of mnemonics. "
