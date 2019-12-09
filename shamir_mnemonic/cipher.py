@@ -32,6 +32,11 @@ def _get_salt(identifier: int) -> bytes:
 def encrypt(
     master_secret: bytes, passphrase: bytes, iteration_exponent: int, identifier: int
 ) -> bytes:
+    if len(master_secret) % 2 != 0:
+        raise ValueError(
+            "The length of the master secret in bytes must be an even number."
+        )
+
     l = master_secret[: len(master_secret) // 2]
     r = master_secret[len(master_secret) // 2 :]
     salt = _get_salt(identifier)
@@ -47,6 +52,11 @@ def decrypt(
     iteration_exponent: int,
     identifier: int,
 ) -> bytes:
+    if len(encrypted_master_secret) % 2 != 0:
+        raise ValueError(
+            "The length of the encrypted master secret in bytes must be an even number."
+        )
+
     l = encrypted_master_secret[: len(encrypted_master_secret) // 2]
     r = encrypted_master_secret[len(encrypted_master_secret) // 2 :]
     salt = _get_salt(identifier)

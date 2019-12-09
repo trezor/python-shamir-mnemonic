@@ -324,11 +324,6 @@ def generate_mnemonics(
     :param int iteration_exponent: The encryption iteration exponent.
     :return: List of mnemonics.
     """
-    if len(master_secret) % 2 != 0:
-        raise ValueError(
-            "The length of the master secret in bytes must be an even number."
-        )
-
     if not all(32 <= c <= 126 for c in passphrase):
         raise ValueError(
             "The passphrase must contain only printable ASCII characters (code points 32-126)."
