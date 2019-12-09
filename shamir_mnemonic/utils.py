@@ -5,14 +5,14 @@ class MnemonicError(Exception):
     pass
 
 
-def round_bits(n: int, radix_bits: int) -> int:
-    """Round up bit count to a multiple of radix_bits."""
+def _round_bits(n: int, radix_bits: int) -> int:
+    """Get the number of `radix_bits`-sized digits required to store a `n`-bit value."""
     return (n + radix_bits - 1) // radix_bits
 
 
 def bits_to_bytes(n: int) -> int:
     """Round up bit count to whole bytes."""
-    return round_bits(n, 8)
+    return _round_bits(n, 8)
 
 
 def bits_to_words(n: int) -> int:
@@ -32,7 +32,7 @@ def bits_to_words(n: int) -> int:
 
     assert hasattr(constants, "RADIX_BITS"), "Declare RADIX_BITS *before* calling this"
 
-    return round_bits(n, constants.RADIX_BITS)
+    return _round_bits(n, constants.RADIX_BITS)
 
 
 def int_to_indices(value: int, length: int, radix_bits: int) -> Iterable[int]:
