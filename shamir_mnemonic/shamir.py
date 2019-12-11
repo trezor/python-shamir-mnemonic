@@ -227,18 +227,13 @@ def split_ems(
     """
     Split an Encrypted Master Secret into mnemonic shares.
 
-    The input for this function is an *already encrypted* Master Secret (EMS).
-    Decryption of the MS depends on the identifier and iteration exponent, so if you are
-    splitting an EMS generated with `cipher.encrypt`, you need to use the same values
-    here. Otherwise it will be impossible to recover the original MS.
+    This function is a counterpart to `recover_ems`, and it is used as a subroutine in
+    `generate_mnemonics`. The input is an *already encrypted* Master Secret (EMS), so it
+    is possible to encrypt the Master Secret in advance and perform the splitting later.
 
-    The intended usecase is to generate the EMS randomly:
-
-    1. Generate a random identifier and a random buffer, which will serve as the EMS.
-    2. Persist both values, and use `split_ems` to give the backup shares to the user.
-       Use `recover_ems` to get back the identifier and EMS in case storage is lost.
-    3. Every time an unencrypted MS is needed, prompt the user for a passphrase.
-    4. Different passphrases will yield different MS from the same backed-up data.
+    Decryption of the MS depends on the identifier and iteration exponent, so the same
+    values used for `cipher.encrypt` must also be used here. Otherwise it will be
+    impossible to recover the original MS from the generated shares.
 
     :param group_threshold: The number of groups required to reconstruct the master secret.
     :param groups: A list of (member_threshold, member_count) pairs for each group, where member_count
@@ -343,11 +338,10 @@ def recover_ems(mnemonics: Iterable[str]) -> Tuple[int, int, bytes]:
     """
     Combine mnemonic shares, recover metadata and the Encrypted Master Secret.
 
-    This is a counterpart to `split_ems`, see its description for the intended usecase.
-    The function `recover_ems` returns the EMS itself and data required for its
-    decryption, except for the passphrase. With this data in persistent storage, it is
-    possible to prompt the user for a passphrase every time, and different passphrases
-    will yield different Master Secrets.
+    This function is a counterpart to `split_ems`, and it is used as a subroutine in
+    `combine_mnemonics`. It returns the EMS itself and data required for its decryption,
+    except for the passphrase. It is thus possible to defer decryption of the Master
+    Secret to a later time.
 
     :param mnemonics: List of mnemonics.
     :return: Identifier, iteration exponent, and Encrypted Master Secret
