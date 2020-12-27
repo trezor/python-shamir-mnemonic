@@ -8,6 +8,7 @@ MNEMONICS_2OF3=(
   'shadow pistol academic always adequate wildlife fancy gross oasis cylinder mustang wrist rescue view short owner flip making coding armed'
   'shadow pistol academic acid actress prayer class unknown daughter sweater depict flip twice unkind craft early superior advocate guest smoking'
 )
+SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 echo_bold() {
   local bold normal
@@ -24,11 +25,12 @@ echo_error() {
   echo >&2 "${error}${*}${normal}"
 }
 
+shamir() {
+  python3 -m shamir_mnemonic.cli "$@"
+}
+
 run_tests() {
-  if ! command -v shamir > /dev/null; then
-    echo 'shamir executable not found'
-    exit 1
-  fi
+  cd -- "${SCRIPT_DIR}"
   echo_bold 'Starting CLI tests for runtime errors (NOT testing correctness)'
   local status=0
   echo_bold 'Testing create 2of3...'
