@@ -55,19 +55,27 @@ class ShamirGroup(NamedTuple):
 
 
 class EncryptedMasterSecret:
-    def __init__(
-        self, identifier: int, iteration_exponent: int, encrypted_master_secret: bytes
-    ):
+    def __init__(self, identifier: int, iteration_exponent: int, ciphertext: bytes):
         self.identifier = identifier
         self.iteration_exponent = iteration_exponent
-        self.encrypted_master_secret = encrypted_master_secret
+        self.ciphertext = ciphertext
+
+    @classmethod
+    def from_master_secret(
+        cls,
+        master_secret: bytes,
+        passphrase: bytes,
+        identifier: int,
+        iteration_exponent: int,
+    ) -> "EncryptedMasterSecret":
+        ciphertext = cipher.encrypt(
+            master_secret, passphrase, iteration_exponent, identifier
+        )
+        return EncryptedMasterSecret(identifier, iteration_exponent, ciphertext)
 
     def decrypt(self, passphrase: bytes) -> bytes:
         return cipher.decrypt(
-            self.encrypted_master_secret,
-            passphrase,
-            self.iteration_exponent,
-            self.identifier,
+            self.ciphertext, passphrase, self.iteration_exponent, self.identifier
         )
 
 
@@ -238,9 +246,7 @@ def decode_mnemonics(mnemonics: Iterable[str]) -> Dict[int, ShamirGroup]:
 def split_ems(
     group_threshold: int,
     groups: Sequence[Tuple[int, int]],
-    identifier: int,
-    iteration_exponent: int,
-    encrypted_master_secret: bytes,
+    encrypted_master_secret: EncryptedMasterSecret,
 ) -> List[List[str]]:
     """
     Split an Encrypted Master Secret into mnemonic shares.
@@ -249,20 +255,14 @@ def split_ems(
     `generate_mnemonics`. The input is an *already encrypted* Master Secret (EMS), so it
     is possible to encrypt the Master Secret in advance and perform the splitting later.
 
-    Decryption of the MS depends on the identifier and iteration exponent, so the same
-    values used for `cipher.encrypt` must also be used here. Otherwise it will be
-    impossible to recover the original MS from the generated shares.
-
     :param group_threshold: The number of groups required to reconstruct the master secret.
     :param groups: A list of (member_threshold, member_count) pairs for each group, where member_count
         is the number of shares to generate for the group and member_threshold is the number of members required to
         reconstruct the group secret.
-    :param identifier: The identifier used when encrypting the master secret.
-    :param iteration_exponent: The encryption iteration exponent.
     :param encrypted_master_secret: The encrypted master secret to split.
     :return: List of groups of mnemonics.
     """
-    if len(encrypted_master_secret) * 8 < MIN_STRENGTH_BITS:
+    if len(encrypted_master_secret.ciphertext) * 8 < MIN_STRENGTH_BITS:
         raise ValueError(
             "The length of the master secret must be "
             f"at least {bits_to_bytes(MIN_STRENGTH_BITS)} bytes."
@@ -282,13 +282,15 @@ def split_ems(
             "Use 1-of-1 member sharing instead."
         )
 
-    group_shares = _split_secret(group_threshold, len(groups), encrypted_master_secret)
+    group_shares = _split_secret(
+        group_threshold, len(groups), encrypted_master_secret.ciphertext
+    )
 
     return [
         [
             Share(
-                identifier,
-                iteration_exponent,
+                encrypted_master_secret.identifier,
+                encrypted_master_secret.iteration_exponent,
                 group_index,
                 group_threshold,
                 len(groups),
@@ -343,13 +345,10 @@ def generate_mnemonics(
         )
 
     identifier = _random_identifier()
-    encrypted_master_secret = cipher.encrypt(
-        master_secret, passphrase, iteration_exponent, identifier
+    encrypted_master_secret = EncryptedMasterSecret.from_master_secret(
+        master_secret, passphrase, identifier, iteration_exponent
     )
-
-    return split_ems(
-        group_threshold, groups, identifier, iteration_exponent, encrypted_master_secret
-    )
+    return split_ems(group_threshold, groups, encrypted_master_secret)
 
 
 def recover_ems(groups: Dict[int, ShamirGroup]) -> EncryptedMasterSecret:
@@ -400,9 +399,9 @@ def recover_ems(groups: Dict[int, ShamirGroup]) -> EncryptedMasterSecret:
         for group_index, group in groups.items()
     ]
 
-    encrypted_master_secret = _recover_secret(params.group_threshold, group_shares)
+    ciphertext = _recover_secret(params.group_threshold, group_shares)
     return EncryptedMasterSecret(
-        params.identifier, params.iteration_exponent, encrypted_master_secret
+        params.identifier, params.iteration_exponent, ciphertext
     )
 
 

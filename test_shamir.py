@@ -151,10 +151,10 @@ def test_vectors():
 def test_split_ems():
     identifier = 42
     exponent = 1
-    encrypted_master_secret = shamir.encrypt(MS, b"TREZOR", exponent, identifier)
-    mnemonics = shamir.split_ems(
-        1, [(3, 5)], identifier, exponent, encrypted_master_secret
+    encrypted_master_secret = shamir.EncryptedMasterSecret.from_master_secret(
+        MS, b"TREZOR", identifier, exponent
     )
+    mnemonics = shamir.split_ems(1, [(3, 5)], encrypted_master_secret)
 
     recovered = shamir.combine_mnemonics(mnemonics[0][:3], b"TREZOR")
     assert recovered == MS
