@@ -2,6 +2,7 @@
 
 from .cipher import decrypt, encrypt
 from .shamir import (
+    EncryptedMasterSecret,
     combine_mnemonics,
     decode_mnemonics,
     generate_mnemonics,
@@ -19,6 +20,7 @@ __all__ = [
     "generate_mnemonics",
     "split_ems",
     "recover_ems",
+    "EncryptedMasterSecret",
     "MnemonicError",
     "Share",
 ]
