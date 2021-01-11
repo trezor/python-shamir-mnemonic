@@ -8,6 +8,7 @@ import click
 from click import style
 
 from .constants import GROUP_PREFIX_LENGTH_WORDS
+from .recovery import RecoveryState
 from .shamir import combine_mnemonics, generate_mnemonics
 from .share import Share
 from .utils import MnemonicError
@@ -144,7 +145,7 @@ def create(
 
 FINISHED = style("\u2713", fg="green", bold=True)
 EMPTY = style("\u2717", fg="red", bold=True)
-INPROGRESS = style("\u26ec", fg="yellow", bold=True)
+INPROGRESS = style("\u26ab", fg="yellow", bold=True)
 
 
 def error(s: str) -> None:
@@ -156,65 +157,40 @@ def error(s: str) -> None:
     "-p", "--passphrase-prompt", is_flag=True, help="Use passphrase after recovering"
 )
 def recover(passphrase_prompt: bool) -> None:
-    last_share: Optional[Share] = None
-    all_mnemonics: List[str] = []
-    groups: Dict[int, Set[Share]] = defaultdict(set)  # group idx : shares
-
-    def make_group_prefix(idx: int) -> str:
-        assert last_share is not None
-        fake_share = attr.evolve(last_share, group_index=idx)
-        return " ".join(fake_share.words()[:GROUP_PREFIX_LENGTH_WORDS])
+    recovery_state = RecoveryState()
 
     def print_group_status(idx: int) -> None:
-        group = groups[idx]
-        group_prefix = style(make_group_prefix(idx), bold=True)
-        bi = style(str(len(group)), bold=True)
-        if not group:
+        shares, threshold = recovery_state.group_status(idx)
+        group_prefix = style(recovery_state.group_prefix(idx), bold=True)
+        bi = style(str(shares), bold=True)
+        if not shares:
             click.echo(f"{EMPTY} {bi} shares from group {group_prefix}")
         else:
-            elem = next(iter(group))
-            prefix = FINISHED if len(group) >= elem.threshold else INPROGRESS
-            bt = style(str(elem.threshold), bold=True)
+            prefix = FINISHED if shares >= threshold else INPROGRESS
+            bt = style(str(threshold), bold=True)
             click.echo(f"{prefix} {bi} of {bt} shares needed from group {group_prefix}")
 
-    def group_is_complete(idx: int) -> bool:
-        group = groups[idx]
-        if not group:
-            return False
-        return len(group) >= next(iter(group)).threshold
-
     def print_status() -> None:
-        assert last_share is not None
-        n_completed = len([idx for idx in groups if group_is_complete(idx)])
-        bn = style(str(n_completed), bold=True)
-        bt = style(str(last_share.group_threshold), bold=True)
+        bn = style(str(recovery_state.groups_complete()), bold=True)
+        bt = style(str(recovery_state.parameters.group_threshold), bold=True)
         click.echo()
-        if last_share.group_count > 1:
+        if recovery_state.parameters.group_count > 1:
             click.echo(f"Completed {bn} of {bt} groups needed:")
-        for i in range(last_share.group_count):
+        for i in range(recovery_state.parameters.group_count):
             print_group_status(i)
 
-    def set_is_complete() -> bool:
-        assert last_share is not None
-        n_completed = len([idx for idx in groups if group_is_complete(idx)])
-        return n_completed >= last_share.group_threshold
-
-    while last_share is None or not set_is_complete():
+    while not recovery_state.is_complete():
         try:
             mnemonic_str = click.prompt("Enter a recovery share")
             share = Share.from_mnemonic(mnemonic_str)
-
-            if last_share is None:
-                last_share = share
-
-            if last_share.common_parameters() != share.common_parameters():
+            if not recovery_state.matches(share):
                 error("This mnemonic is not part of the current set. Please try again.")
+                continue
+            if share in recovery_state:
+                error("Share already entered.")
+                continue
 
-            else:
-                last_share = share
-                groups[share.group_index].add(share)
-                all_mnemonics.append(mnemonic_str)
-
+            recovery_state.add_share(share)
             print_status()
 
         except click.Abort:
@@ -235,7 +211,7 @@ def recover(passphrase_prompt: bool) -> None:
                 click.echo("Passphrase must be ASCII. Please try again.")
 
     try:
-        master_secret = combine_mnemonics(all_mnemonics, passphrase_bytes)
+        master_secret = recovery_state.recover(passphrase_bytes)
     except MnemonicError as e:
         error(str(e))
         click.echo("Recovery failed")
