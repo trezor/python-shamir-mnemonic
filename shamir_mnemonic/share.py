@@ -46,7 +46,7 @@ class Share:
     group_threshold: int
     group_count: int
     index: int
-    threshold: int
+    member_threshold: int
     value: bytes
 
     def common_parameters(self) -> ShareSetParameters:
@@ -74,7 +74,7 @@ class Share:
         val <<= 4
         val += self.index
         val <<= 4
-        val += self.threshold - 1
+        val += self.member_threshold - 1
         # group parameters are 2 words
         return _int_to_word_indices(val, 2)
 
@@ -126,7 +126,7 @@ class Share:
         share_params_data = mnemonic_data[ID_EXP_LENGTH_WORDS : ID_EXP_LENGTH_WORDS + 2]
         share_params_int = _int_from_word_indices(share_params_data)
         share_params = int_to_indices(share_params_int, 5, 4)
-        group_index, group_threshold, group_count, index, threshold = share_params
+        group_index, group_threshold, group_count, index, member_threshold = share_params
 
         if group_count < group_threshold:
             raise MnemonicError(
@@ -156,6 +156,6 @@ class Share:
             group_threshold + 1,
             group_count + 1,
             index,
-            threshold + 1,
+            member_threshold + 1,
             value,
         )

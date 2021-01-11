@@ -75,7 +75,7 @@ You can specify a custom scheme. For example, to create three groups, with 2-of-
 
 .. code-block:: console
 
-    $ shamir create custom --threshold 3 --group 2 3 --group 2 5 --group 4 5
+    $ shamir create custom --group-threshold 3 --group 2 3 --group 2 5 --group 4 5
 
 Use :code:`shamir --help` or :code:`shamir create --help` to see all available options.
 

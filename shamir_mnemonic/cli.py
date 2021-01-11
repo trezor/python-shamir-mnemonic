@@ -32,7 +32,7 @@ def cli() -> None:
 )
 @click.option(
     "-t",
-    "--threshold",
+    "--group-threshold",
     type=int,
     help="Number of groups required for recovery in the custom scheme.",
 )
@@ -47,7 +47,7 @@ def cli() -> None:
 def create(
     scheme: str,
     groups: Sequence[Tuple[int, int]],
-    threshold: int,
+    group_threshold: int,
     exponent: int,
     master_secret: str,
     passphrase: str,
@@ -71,24 +71,24 @@ def create(
             "Only use passphrase in conjunction with an explicit master secret"
         )
 
-    if (groups or threshold is not None) and scheme != "custom":
+    if (groups or group_threshold is not None) and scheme != "custom":
         raise click.BadArgumentUsage(f"To use -g/-t, you must select 'custom' scheme.")
 
     if scheme == "single":
-        threshold = 1
+        group_threshold = 1
         groups = [(1, 1)]
     elif scheme == "master":
-        threshold = 1
+        group_threshold = 1
         groups = [(1, 1), (3, 5)]
     elif "of" in scheme:
         try:
             m, n = map(int, scheme.split("of", maxsplit=1))
-            threshold = 1
+            group_threshold = 1
             groups = [(m, n)]
         except Exception as e:
             raise click.BadArgumentUsage(f"Invalid scheme: {scheme}") from e
     elif scheme == "custom":
-        if threshold is None:
+        if group_threshold is None:
             raise click.BadArgumentUsage(
                 "Use '-t' to specify the number of groups required for recovery."
             )
@@ -126,7 +126,7 @@ def create(
         passphrase_bytes = b""
 
     mnemonics = generate_mnemonics(
-        threshold, groups, secret_bytes, passphrase_bytes, exponent
+        group_threshold, groups, secret_bytes, passphrase_bytes, exponent
     )
 
     for i, (group, (m, n)) in enumerate(zip(mnemonics, groups)):
@@ -160,14 +160,14 @@ def recover(passphrase_prompt: bool) -> None:
     recovery_state = RecoveryState()
 
     def print_group_status(idx: int) -> None:
-        shares, threshold = recovery_state.group_status(idx)
+        group_size, group_threshold = recovery_state.group_status(idx)
         group_prefix = style(recovery_state.group_prefix(idx), bold=True)
-        bi = style(str(shares), bold=True)
-        if not shares:
+        bi = style(str(group_size), bold=True)
+        if not group_size:
             click.echo(f"{EMPTY} {bi} shares from group {group_prefix}")
         else:
-            prefix = FINISHED if shares >= threshold else INPROGRESS
-            bt = style(str(threshold), bold=True)
+            prefix = FINISHED if group_size >= group_threshold else INPROGRESS
+            bt = style(str(group_threshold), bold=True)
             click.echo(f"{prefix} {bi} of {bt} shares needed from group {group_prefix}")
 
     def print_status() -> None:
