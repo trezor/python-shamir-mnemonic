@@ -54,6 +54,23 @@ class ShamirGroup(NamedTuple):
         return next(iter(self.shares)).common_parameters()
 
 
+class EncryptedMasterSecret:
+    def __init__(
+        self, identifier: int, iteration_exponent: int, encrypted_master_secret: bytes
+    ):
+        self.identifier = identifier
+        self.iteration_exponent = iteration_exponent
+        self.encrypted_master_secret = encrypted_master_secret
+
+    def decrypt(self, passphrase: bytes) -> bytes:
+        return cipher.decrypt(
+            self.encrypted_master_secret,
+            passphrase,
+            self.iteration_exponent,
+            self.identifier,
+        )
+
+
 RANDOM_BYTES = secrets.token_bytes
 """Source of random bytes. Can be overriden for deterministic testing."""
 
@@ -335,7 +352,7 @@ def generate_mnemonics(
     )
 
 
-def recover_ems(groups: Dict[int, ShamirGroup]) -> Tuple[int, int, bytes]:
+def recover_ems(groups: Dict[int, ShamirGroup]) -> EncryptedMasterSecret:
     """
     Combine shares, recover metadata and the Encrypted Master Secret.
 
@@ -384,7 +401,9 @@ def recover_ems(groups: Dict[int, ShamirGroup]) -> Tuple[int, int, bytes]:
     ]
 
     encrypted_master_secret = _recover_secret(params.group_threshold, group_shares)
-    return params.identifier, params.iteration_exponent, encrypted_master_secret
+    return EncryptedMasterSecret(
+        params.identifier, params.iteration_exponent, encrypted_master_secret
+    )
 
 
 def combine_mnemonics(mnemonics: Iterable[str], passphrase: bytes = b"") -> bytes:
@@ -404,7 +423,5 @@ def combine_mnemonics(mnemonics: Iterable[str], passphrase: bytes = b"") -> byte
         raise MnemonicError("The list of mnemonics is empty.")
 
     groups = decode_mnemonics(mnemonics)
-    identifier, iteration_exponent, encrypted_master_secret = recover_ems(groups)
-    return cipher.decrypt(
-        encrypted_master_secret, passphrase, iteration_exponent, identifier
-    )
+    encrypted_master_secret = recover_ems(groups)
+    return encrypted_master_secret.decrypt(passphrase)
