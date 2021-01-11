@@ -50,6 +50,9 @@ class ShamirGroup(NamedTuple):
     def to_raw_shares(self) -> List[RawShare]:
         return [RawShare(s.index, s.value) for s in self.shares]
 
+    def common_parameters(self) -> ShareSetParameters:
+        return next(iter(self.shares)).common_parameters()
+
 
 RANDOM_BYTES = secrets.token_bytes
 """Source of random bytes. Can be overriden for deterministic testing."""
@@ -189,9 +192,7 @@ def _recover_secret(threshold: int, shares: Sequence[RawShare]) -> bytes:
     return shared_secret
 
 
-def _decode_mnemonics(
-    mnemonics: Iterable[str],
-) -> Tuple[ShareSetParameters, Dict[int, ShamirGroup]]:
+def decode_mnemonics(mnemonics: Iterable[str]) -> Dict[int, ShamirGroup]:
     all_group_params = set()
     groups: Dict[int, ShamirGroup] = {}
     for mnemonic in mnemonics:
@@ -214,7 +215,7 @@ def _decode_mnemonics(
             "must have the same group threshold and the same group count."
         )
 
-    return all_group_params.pop(), groups
+    return groups
 
 
 def split_ems(
@@ -334,23 +335,23 @@ def generate_mnemonics(
     )
 
 
-def recover_ems(mnemonics: Iterable[str]) -> Tuple[int, int, bytes]:
+def recover_ems(groups: Dict[int, ShamirGroup]) -> Tuple[int, int, bytes]:
     """
-    Combine mnemonic shares, recover metadata and the Encrypted Master Secret.
+    Combine shares, recover metadata and the Encrypted Master Secret.
 
     This function is a counterpart to `split_ems`, and it is used as a subroutine in
     `combine_mnemonics`. It returns the EMS itself and data required for its decryption,
     except for the passphrase. It is thus possible to defer decryption of the Master
     Secret to a later time.
 
-    :param mnemonics: List of mnemonics.
+    :param groups: Set of shares classified into groups.
     :return: Identifier, iteration exponent, and Encrypted Master Secret
     """
 
-    if not mnemonics:
-        raise MnemonicError("The list of mnemonics is empty.")
+    if not groups:
+        raise MnemonicError("The set of shares is empty.")
 
-    params, groups = _decode_mnemonics(mnemonics)
+    params = next(iter(groups.values())).common_parameters()
 
     if len(groups) < params.group_threshold:
         raise MnemonicError(
@@ -376,7 +377,9 @@ def recover_ems(mnemonics: Iterable[str]) -> Tuple[int, int, bytes]:
             )
 
     group_shares = [
-        RawShare(group_index, _recover_secret(group.member_threshold, group.to_raw_shares()))
+        RawShare(
+            group_index, _recover_secret(group.member_threshold, group.to_raw_shares())
+        )
         for group_index, group in groups.items()
     ]
 
@@ -400,10 +403,8 @@ def combine_mnemonics(mnemonics: Iterable[str], passphrase: bytes = b"") -> byte
     if not mnemonics:
         raise MnemonicError("The list of mnemonics is empty.")
 
-    identifier, iteration_exponent, encrypted_master_secret = recover_ems(mnemonics)
+    groups = decode_mnemonics(mnemonics)
+    identifier, iteration_exponent, encrypted_master_secret = recover_ems(groups)
     return cipher.decrypt(
-        encrypted_master_secret,
-        passphrase,
-        iteration_exponent,
-        identifier,
+        encrypted_master_secret, passphrase, iteration_exponent, identifier
     )

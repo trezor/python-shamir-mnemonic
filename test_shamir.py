@@ -4,7 +4,6 @@ from itertools import combinations
 from random import shuffle
 
 import pytest
-
 import shamir_mnemonic as shamir
 from shamir_mnemonic import MnemonicError
 
@@ -164,6 +163,7 @@ def test_split_ems():
 def test_recover_ems():
     mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS, b"TREZOR")[0]
 
-    identifier, exponent, encrypted_master_secret = shamir.recover_ems(mnemonics[:3])
+    groups = shamir.decode_mnemonics(mnemonics[:3])
+    identifier, exponent, encrypted_master_secret = shamir.recover_ems(groups)
     recovered = shamir.decrypt(encrypted_master_secret, b"TREZOR", exponent, identifier)
     assert recovered == MS
