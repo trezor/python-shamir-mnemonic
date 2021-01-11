@@ -164,6 +164,6 @@ def test_recover_ems():
     mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS, b"TREZOR")[0]
 
     groups = shamir.decode_mnemonics(mnemonics[:3])
-    identifier, exponent, encrypted_master_secret = shamir.recover_ems(groups)
-    recovered = shamir.decrypt(encrypted_master_secret, b"TREZOR", exponent, identifier)
+    encrypted_master_secret = shamir.recover_ems(groups)
+    recovered = encrypted_master_secret.decrypt(b"TREZOR")
     assert recovered == MS
