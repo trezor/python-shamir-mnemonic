@@ -402,5 +402,8 @@ def combine_mnemonics(mnemonics: Iterable[str], passphrase: bytes = b"") -> byte
 
     identifier, iteration_exponent, encrypted_master_secret = recover_ems(mnemonics)
     return cipher.decrypt(
-        encrypted_master_secret, passphrase, iteration_exponent, identifier,
+        encrypted_master_secret,
+        passphrase,
+        iteration_exponent,
+        identifier,
     )
