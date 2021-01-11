@@ -39,14 +39,14 @@ class RecoveryState:
             return 0, UNDETERMINED
 
         share = next(iter(group))
-        return len(group), share.threshold
+        return len(group), share.member_threshold
 
     def group_is_complete(self, group_index: int) -> bool:
         """Check whether a given group is already complete."""
-        shares, threshold = self.group_status(group_index)
-        if threshold == UNDETERMINED:
+        shares, member_threshold = self.group_status(group_index)
+        if member_threshold == UNDETERMINED:
             return False
-        return shares >= threshold
+        return shares >= member_threshold
 
     def groups_complete(self) -> int:
         """Return the number of groups that are already complete."""

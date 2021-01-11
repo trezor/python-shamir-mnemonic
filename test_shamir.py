@@ -85,17 +85,17 @@ def test_group_sharing_threshold_1():
     )
 
     # Test all valid combinations of mnemonics.
-    for group, threshold in zip(mnemonics, member_thresholds):
-        for group_subset in combinations(group, threshold):
+    for group, member_threshold in zip(mnemonics, member_thresholds):
+        for group_subset in combinations(group, member_threshold):
             mnemonic_subset = list(group_subset)
             shuffle(mnemonic_subset)
             assert MS == shamir.combine_mnemonics(mnemonic_subset)
 
 
 def test_all_groups_exist():
-    for threshold in (1, 2, 5):
+    for group_threshold in (1, 2, 5):
         mnemonics = shamir.generate_mnemonics(
-            threshold, [(3, 5), (1, 1), (2, 3), (2, 5), (3, 5)], MS
+            group_threshold, [(3, 5), (1, 1), (2, 3), (2, 5), (3, 5)], MS
         )
         assert len(mnemonics) == 5
         assert len(sum(mnemonics, [])) == 19
@@ -126,7 +126,7 @@ def test_invalid_sharing():
     with pytest.raises(ValueError):
         shamir.generate_mnemonics(2, [(0, 2), (2, 5)], MS)
 
-    # Group with multiple members and threshold 1.
+    # Group with multiple members and member threshold 1.
     with pytest.raises(ValueError):
         shamir.generate_mnemonics(2, [(3, 5), (1, 3), (2, 5)], MS)
 

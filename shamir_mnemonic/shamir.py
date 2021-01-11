@@ -44,7 +44,7 @@ class RawShare(NamedTuple):
 
 
 class ShamirGroup(NamedTuple):
-    threshold: int
+    member_threshold: int
     shares: Set[Share]
 
     def to_raw_shares(self) -> List[RawShare]:
@@ -198,9 +198,9 @@ def _decode_mnemonics(
         share = Share.from_mnemonic(mnemonic)
         all_group_params.add(share.common_parameters())
         group = groups.setdefault(
-            share.group_index, ShamirGroup(share.threshold, set())
+            share.group_index, ShamirGroup(share.member_threshold, set())
         )
-        if group.threshold != share.threshold:
+        if group.member_threshold != share.member_threshold:
             raise MnemonicError(
                 "Invalid set of mnemonics. All mnemonics in a group must have "
                 "the same member threshold."
@@ -365,18 +365,18 @@ def recover_ems(mnemonics: Iterable[str]) -> Tuple[int, int, bytes]:
             f"but {len(groups)} were provided."
         )
 
-    for threshold, shares in groups.values():
-        if len(shares) != threshold:
+    for member_threshold, shares in groups.values():
+        if len(shares) != member_threshold:
             share_words = next(iter(shares)).words()
             prefix = " ".join(share_words[:GROUP_PREFIX_LENGTH_WORDS])
             raise MnemonicError(
                 "Wrong number of mnemonics. "
-                f'Expected {threshold} mnemonics starting with "{prefix} ...", '
+                f'Expected {member_threshold} mnemonics starting with "{prefix} ...", '
                 f"but {len(shares)} were provided."
             )
 
     group_shares = [
-        RawShare(group_index, _recover_secret(group.threshold, group.to_raw_shares()))
+        RawShare(group_index, _recover_secret(group.member_threshold, group.to_raw_shares()))
         for group_index, group in groups.items()
     ]
 
