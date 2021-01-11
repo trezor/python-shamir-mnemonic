@@ -3,7 +3,6 @@ import json
 import random
 
 import attr
-
 from shamir_mnemonic import constants, rs1024, shamir, wordlist
 from shamir_mnemonic.share import Share
 
