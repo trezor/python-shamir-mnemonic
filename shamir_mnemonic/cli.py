@@ -145,7 +145,7 @@ def create(
 
 FINISHED = style("\u2713", fg="green", bold=True)
 EMPTY = style("\u2717", fg="red", bold=True)
-INPROGRESS = style("\u26ab", fg="yellow", bold=True)
+INPROGRESS = style("\u25cf", fg="yellow", bold=True)
 
 
 def error(s: str) -> None:
