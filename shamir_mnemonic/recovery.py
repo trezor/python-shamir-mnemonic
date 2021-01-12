@@ -71,19 +71,11 @@ class RecoveryState:
 
     def add_share(self, share: Share) -> bool:
         """Add a share to the recovery set."""
-        if self.is_complete():
-            raise MnemonicError("The recovery set is already complete.")
         if not self.matches(share):
             raise MnemonicError(
                 "This mnemonic is not part of the current set. Please try again."
             )
-        group = self.groups[share.group_index]
-        if group.is_complete():
-            prefix = " ".join(share.words()[:GROUP_PREFIX_LENGTH_WORDS])
-            raise MnemonicError(
-                f'The group of mnemonics starting with "{prefix} ..." is already complete.'
-            )
-        group.add(share)
+        self.groups[share.group_index].add(share)
         self.last_share = share
         if self.parameters is None:
             self.parameters = share.common_parameters()
@@ -103,11 +95,14 @@ class RecoveryState:
 
     def recover(self, passphrase: bytes) -> bytes:
         """Recover the master secret, given a passphrase."""
-        # Use only groups that meet the member threshold.
-        groups = {
-            group_index: group
-            for group_index, group in self.groups.items()
-            if group.is_complete()
-        }
-        encrypted_master_secret = recover_ems(groups)
+        # Select a subset of shares which meets the thresholds.
+        reduced_groups: Dict[int, ShareGroup] = {}
+        for group_index, group in self.groups.items():
+            if group.is_complete():
+                reduced_groups[group_index] = group.get_minimal_group()
+
+            if len(reduced_groups) >= self.parameters.group_threshold:
+                break
+
+        encrypted_master_secret = recover_ems(reduced_groups)
         return encrypted_master_secret.decrypt(passphrase)
