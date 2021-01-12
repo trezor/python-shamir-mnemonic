@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import attr
 
 from .constants import GROUP_PREFIX_LENGTH_WORDS
-from .shamir import combine_mnemonics
+from .shamir import ShareGroup, recover_ems
 from .share import Share, ShareSetParameters
 from .utils import MnemonicError
 
@@ -15,17 +15,16 @@ class RecoveryState:
     """Object for keeping track of running Shamir recovery."""
 
     def __init__(self) -> None:
-        self.all_shares: List[Share] = []
-        self.groups: Dict[int, Set[Share]] = defaultdict(set)
+        self.last_share: Optional[Share] = None
+        self.groups: Dict[int, ShareGroup] = defaultdict(ShareGroup)
         self.parameters: Optional[ShareSetParameters] = None
 
     def group_prefix(self, group_index: int) -> str:
         """Return three starting words of a given group."""
-        if not self.all_shares:
+        if not self.last_share:
             raise RuntimeError("Add at least one share first")
 
-        some_share = self.all_shares[0]
-        fake_share = attr.evolve(some_share, group_index=group_index)
+        fake_share = attr.evolve(self.last_share, group_index=group_index)
         return " ".join(fake_share.words()[:GROUP_PREFIX_LENGTH_WORDS])
 
     def group_status(self, group_index: int) -> Tuple[int, int]:
@@ -38,15 +37,11 @@ class RecoveryState:
         if not group:
             return 0, UNDETERMINED
 
-        share = next(iter(group))
-        return len(group), share.member_threshold
+        return len(group), group.member_threshold()
 
     def group_is_complete(self, group_index: int) -> bool:
         """Check whether a given group is already complete."""
-        shares, member_threshold = self.group_status(group_index)
-        if member_threshold == UNDETERMINED:
-            return False
-        return shares >= member_threshold
+        return self.groups[group_index].is_complete()
 
     def groups_complete(self) -> int:
         """Return the number of groups that are already complete."""
@@ -76,12 +71,20 @@ class RecoveryState:
 
     def add_share(self, share: Share) -> bool:
         """Add a share to the recovery set."""
+        if self.is_complete():
+            raise MnemonicError("The recovery set is already complete.")
         if not self.matches(share):
             raise MnemonicError(
                 "This mnemonic is not part of the current set. Please try again."
             )
-        self.groups[share.group_index].add(share)
-        self.all_shares.append(share)
+        group = self.groups[share.group_index]
+        if group.is_complete():
+            prefix = " ".join(share.words()[:GROUP_PREFIX_LENGTH_WORDS])
+            raise MnemonicError(
+                f'The group of mnemonics starting with "{prefix} ..." is already complete.'
+            )
+        group.add(share)
+        self.last_share = share
         if self.parameters is None:
             self.parameters = share.common_parameters()
         return True
@@ -100,5 +103,11 @@ class RecoveryState:
 
     def recover(self, passphrase: bytes) -> bytes:
         """Recover the master secret, given a passphrase."""
-        all_mnemonics = [" ".join(share.words()) for share in self.all_shares]
-        return combine_mnemonics(all_mnemonics, passphrase)
+        # Use only groups that meet the member threshold.
+        groups = {
+            group_index: group
+            for group_index, group in self.groups.items()
+            if group.is_complete()
+        }
+        encrypted_master_secret = recover_ems(groups)
+        return encrypted_master_secret.decrypt(passphrase)

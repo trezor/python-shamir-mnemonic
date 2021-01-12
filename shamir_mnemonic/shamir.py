@@ -21,7 +21,7 @@
 
 import hmac
 import secrets
-from typing import Dict, Iterable, List, NamedTuple, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Sequence, Set, Tuple
 
 from . import cipher
 from .constants import (
@@ -43,15 +43,44 @@ class RawShare(NamedTuple):
     data: bytes
 
 
-class ShamirGroup(NamedTuple):
-    member_threshold: int
-    shares: Set[Share]
+class ShareGroup:
+    def __init__(self) -> None:
+        self.shares: Set[Share] = set()
+
+    def __iter__(self) -> Iterable[Share]:
+        return iter(self.shares)
+
+    def __len__(self) -> int:
+        return len(self.shares)
+
+    def __bool__(self) -> bool:
+        return bool(self.shares)
+
+    def __contains__(self, obj: Any) -> bool:
+        return obj in self.shares
+
+    def add(self, share: Share) -> None:
+        if self.shares and self.member_threshold() != share.member_threshold:
+            raise MnemonicError(
+                "Invalid set of mnemonics. All mnemonics in a group must have "
+                "the same member threshold."
+            )
+        self.shares.add(share)
 
     def to_raw_shares(self) -> List[RawShare]:
         return [RawShare(s.index, s.value) for s in self.shares]
 
     def common_parameters(self) -> ShareSetParameters:
         return next(iter(self.shares)).common_parameters()
+
+    def member_threshold(self) -> int:
+        return next(iter(self.shares)).member_threshold
+
+    def is_complete(self) -> int:
+        if self.shares:
+            return len(self.shares) >= self.member_threshold()
+        else:
+            return False
 
 
 class EncryptedMasterSecret:
@@ -217,21 +246,14 @@ def _recover_secret(threshold: int, shares: Sequence[RawShare]) -> bytes:
     return shared_secret
 
 
-def decode_mnemonics(mnemonics: Iterable[str]) -> Dict[int, ShamirGroup]:
+def decode_mnemonics(mnemonics: Iterable[str]) -> Dict[int, ShareGroup]:
     all_group_params = set()
-    groups: Dict[int, ShamirGroup] = {}
+    groups: Dict[int, ShareGroup] = {}
     for mnemonic in mnemonics:
         share = Share.from_mnemonic(mnemonic)
         all_group_params.add(share.common_parameters())
-        group = groups.setdefault(
-            share.group_index, ShamirGroup(share.member_threshold, set())
-        )
-        if group.member_threshold != share.member_threshold:
-            raise MnemonicError(
-                "Invalid set of mnemonics. All mnemonics in a group must have "
-                "the same member threshold."
-            )
-        group.shares.add(share)
+        group = groups.setdefault(share.group_index, ShareGroup())
+        group.add(share)
 
     if len(all_group_params) != 1:
         raise MnemonicError(
@@ -351,7 +373,7 @@ def generate_mnemonics(
     return split_ems(group_threshold, groups, encrypted_master_secret)
 
 
-def recover_ems(groups: Dict[int, ShamirGroup]) -> EncryptedMasterSecret:
+def recover_ems(groups: Dict[int, ShareGroup]) -> EncryptedMasterSecret:
     """
     Combine shares, recover metadata and the Encrypted Master Secret.
 
@@ -361,7 +383,7 @@ def recover_ems(groups: Dict[int, ShamirGroup]) -> EncryptedMasterSecret:
     Secret to a later time.
 
     :param groups: Set of shares classified into groups.
-    :return: Identifier, iteration exponent, and Encrypted Master Secret
+    :return: Encrypted Master Secret
     """
 
     if not groups:
@@ -382,19 +404,20 @@ def recover_ems(groups: Dict[int, ShamirGroup]) -> EncryptedMasterSecret:
             f"but {len(groups)} were provided."
         )
 
-    for member_threshold, shares in groups.values():
-        if len(shares) != member_threshold:
-            share_words = next(iter(shares)).words()
+    for group in groups.values():
+        if len(group) != group.member_threshold():
+            share_words = next(iter(group)).words()
             prefix = " ".join(share_words[:GROUP_PREFIX_LENGTH_WORDS])
             raise MnemonicError(
                 "Wrong number of mnemonics. "
-                f'Expected {member_threshold} mnemonics starting with "{prefix} ...", '
-                f"but {len(shares)} were provided."
+                f'Expected {group.member_threshold()} mnemonics starting with "{prefix} ...", '
+                f"but {len(group)} were provided."
             )
 
     group_shares = [
         RawShare(
-            group_index, _recover_secret(group.member_threshold, group.to_raw_shares())
+            group_index,
+            _recover_secret(group.member_threshold(), group.to_raw_shares()),
         )
         for group_index, group in groups.items()
     ]
