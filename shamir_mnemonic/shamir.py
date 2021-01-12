@@ -70,6 +70,13 @@ class ShareGroup:
     def to_raw_shares(self) -> List[RawShare]:
         return [RawShare(s.index, s.value) for s in self.shares]
 
+    def get_minimal_group(self) -> "ShareGroup":
+        group = ShareGroup()
+        group.shares = set(
+            share for _, share in zip(range(self.member_threshold()), self.shares)
+        )
+        return group
+
     def common_parameters(self) -> ShareSetParameters:
         return next(iter(self.shares)).common_parameters()
 
