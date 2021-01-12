@@ -154,9 +154,10 @@ def test_split_ems():
     encrypted_master_secret = shamir.EncryptedMasterSecret.from_master_secret(
         MS, b"TREZOR", identifier, exponent
     )
-    mnemonics = shamir.split_ems(1, [(3, 5)], encrypted_master_secret)
+    grouped_shares = shamir.split_ems(1, [(3, 5)], encrypted_master_secret)
+    mnemonics = [share.mnemonic() for share in grouped_shares[0]]
 
-    recovered = shamir.combine_mnemonics(mnemonics[0][:3], b"TREZOR")
+    recovered = shamir.combine_mnemonics(mnemonics[:3], b"TREZOR")
     assert recovered == MS
 
 

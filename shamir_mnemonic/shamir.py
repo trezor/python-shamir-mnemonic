@@ -319,7 +319,7 @@ def split_ems(
                 member_index,
                 member_threshold,
                 value,
-            ).mnemonic()
+            )
             for member_index, value in _split_secret(
                 member_threshold, member_count, group_secret
             )
@@ -370,7 +370,8 @@ def generate_mnemonics(
     encrypted_master_secret = EncryptedMasterSecret.from_master_secret(
         master_secret, passphrase, identifier, iteration_exponent
     )
-    return split_ems(group_threshold, groups, encrypted_master_secret)
+    grouped_shares = split_ems(group_threshold, groups, encrypted_master_secret)
+    return [[share.mnemonic() for share in group] for group in grouped_shares]
 
 
 def recover_ems(groups: Dict[int, ShareGroup]) -> EncryptedMasterSecret:
