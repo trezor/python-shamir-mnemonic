@@ -39,7 +39,7 @@ from .utils import MnemonicError, bits_to_bytes
 
 
 class RawShare(NamedTuple):
-    idx: int
+    x: int
     data: bytes
 
 
@@ -145,12 +145,12 @@ def _interpolate(shares: Sequence[RawShare], x: int) -> bytes:
     :rtype: Array of bytes.
     """
 
-    x_coordinates = set(share[0] for share in shares)
+    x_coordinates = set(share.x for share in shares)
 
     if len(x_coordinates) != len(shares):
         raise MnemonicError("Invalid set of shares. Share indices must be unique.")
 
-    share_value_lengths = set(len(share[1]) for share in shares)
+    share_value_lengths = set(len(share.data) for share in shares)
     if len(share_value_lengths) != 1:
         raise MnemonicError(
             "Invalid set of shares. All share values must have the same length."
@@ -158,19 +158,19 @@ def _interpolate(shares: Sequence[RawShare], x: int) -> bytes:
 
     if x in x_coordinates:
         for share in shares:
-            if share[0] == x:
-                return share[1]
+            if share.x == x:
+                return share.data
 
     # Logarithm of the product of (x_i - x) for i = 1, ... , k.
-    log_prod = sum(LOG_TABLE[share[0] ^ x] for share in shares)
+    log_prod = sum(LOG_TABLE[share.x ^ x] for share in shares)
 
     result = bytes(share_value_lengths.pop())
     for share in shares:
         # The logarithm of the Lagrange basis polynomial evaluated at x.
         log_basis_eval = (
             log_prod
-            - LOG_TABLE[share[0] ^ x]
-            - sum(LOG_TABLE[share[0] ^ other[0]] for other in shares)
+            - LOG_TABLE[share.x ^ x]
+            - sum(LOG_TABLE[share.x ^ other.x] for other in shares)
         ) % 255
 
         result = bytes(
@@ -180,7 +180,7 @@ def _interpolate(shares: Sequence[RawShare], x: int) -> bytes:
                 if share_val != 0
                 else 0
             )
-            for share_val, intermediate_sum in zip(share[1], result)
+            for share_val, intermediate_sum in zip(share.data, result)
         )
 
     return result
@@ -233,7 +233,7 @@ def _split_secret(
 def _recover_secret(threshold: int, shares: Sequence[RawShare]) -> bytes:
     # If the threshold is 1, then the digest of the shared secret is not used.
     if threshold == 1:
-        return next(iter(shares))[1]
+        return next(iter(shares)).data
 
     shared_secret = _interpolate(shares, SECRET_INDEX)
     digest_share = _interpolate(shares, DIGEST_INDEX)
