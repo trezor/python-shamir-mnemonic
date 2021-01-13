@@ -5,7 +5,7 @@ import attr
 
 from .constants import GROUP_PREFIX_LENGTH_WORDS
 from .shamir import ShareGroup, recover_ems
-from .share import Share, ShareSetParameters
+from .share import Share, ShareCommonParameters
 from .utils import MnemonicError
 
 UNDETERMINED = -1
@@ -17,7 +17,7 @@ class RecoveryState:
     def __init__(self) -> None:
         self.last_share: Optional[Share] = None
         self.groups: Dict[int, ShareGroup] = defaultdict(ShareGroup)
-        self.parameters: Optional[ShareSetParameters] = None
+        self.parameters: Optional[ShareCommonParameters] = None
 
     def group_prefix(self, group_index: int) -> str:
         """Return three starting words of a given group."""

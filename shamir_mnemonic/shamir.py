@@ -34,7 +34,7 @@ from .constants import (
     MIN_STRENGTH_BITS,
     SECRET_INDEX,
 )
-from .share import Share, ShareSetParameters
+from .share import Share, ShareCommonParameters, ShareGroupParameters
 from .utils import MnemonicError, bits_to_bytes
 
 
@@ -60,11 +60,17 @@ class ShareGroup:
         return obj in self.shares
 
     def add(self, share: Share) -> None:
-        if self.shares and self.member_threshold() != share.member_threshold:
-            raise MnemonicError(
-                "Invalid set of mnemonics. All mnemonics in a group must have "
-                "the same member threshold."
+        if self.shares and self.group_parameters() != share.group_parameters():
+            fields = zip(
+                ShareGroupParameters._fields,
+                self.group_parameters(),
+                share.group_parameters(),
             )
+            mismatch = next(name for name, x, y in fields if x != y)
+            raise MnemonicError(
+                f"Invalid set of mnemonics. The {mismatch} parameters don't match."
+            )
+
         self.shares.add(share)
 
     def to_raw_shares(self) -> List[RawShare]:
@@ -77,8 +83,11 @@ class ShareGroup:
         )
         return group
 
-    def common_parameters(self) -> ShareSetParameters:
+    def common_parameters(self) -> ShareCommonParameters:
         return next(iter(self.shares)).common_parameters()
+
+    def group_parameters(self) -> ShareGroupParameters:
+        return next(iter(self.shares)).group_parameters()
 
     def member_threshold(self) -> int:
         return next(iter(self.shares)).member_threshold
@@ -254,15 +263,15 @@ def _recover_secret(threshold: int, shares: Sequence[RawShare]) -> bytes:
 
 
 def decode_mnemonics(mnemonics: Iterable[str]) -> Dict[int, ShareGroup]:
-    all_group_params = set()
+    common_params: Set[ShareCommonParameters] = set()
     groups: Dict[int, ShareGroup] = {}
     for mnemonic in mnemonics:
         share = Share.from_mnemonic(mnemonic)
-        all_group_params.add(share.common_parameters())
+        common_params.add(share.common_parameters())
         group = groups.setdefault(share.group_index, ShareGroup())
         group.add(share)
 
-    if len(all_group_params) != 1:
+    if len(common_params) != 1:
         raise MnemonicError(
             "Invalid set of mnemonics. "
             f"All mnemonics must begin with the same {ID_EXP_LENGTH_WORDS} words, "

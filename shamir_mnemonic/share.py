@@ -29,11 +29,24 @@ def _int_from_word_indices(indices: Iterable[WordIndex]) -> int:
     return value
 
 
-class ShareSetParameters(NamedTuple):
+class ShareCommonParameters(NamedTuple):
+    """Parameters that are common to all shares of a master secret."""
+
     identifier: int
     iteration_exponent: int
     group_threshold: int
     group_count: int
+
+
+class ShareGroupParameters(NamedTuple):
+    """Parameters that are common to all shares of a master secret, which belong to the same group."""
+
+    identifier: int
+    iteration_exponent: int
+    group_index: int
+    group_threshold: int
+    group_count: int
+    member_threshold: int
 
 
 @attr.s(auto_attribs=True, frozen=True)
@@ -49,13 +62,24 @@ class Share:
     member_threshold: int
     value: bytes
 
-    def common_parameters(self) -> ShareSetParameters:
+    def common_parameters(self) -> ShareCommonParameters:
         """Return values that uniquely identify a matching set of shares."""
-        return ShareSetParameters(
+        return ShareCommonParameters(
             self.identifier,
             self.iteration_exponent,
             self.group_threshold,
             self.group_count,
+        )
+
+    def group_parameters(self) -> ShareGroupParameters:
+        """Return values that uniquely identify shares belonging to the same group."""
+        return ShareGroupParameters(
+            self.identifier,
+            self.iteration_exponent,
+            self.group_index,
+            self.group_threshold,
+            self.group_count,
+            self.member_threshold,
         )
 
     def _encode_id_exp(self) -> List[WordIndex]:
