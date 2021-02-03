@@ -13,7 +13,18 @@ The format is based on `Keep a Changelog`_, and this project adheres to
 
 No changes yet
 
-.. _Unreleased: https://github.com/trezor/python-shamir-mnemonic/compare/v0.2.0...HEAD
+.. _Unreleased: https://github.com/trezor/python-shamir-mnemonic/compare/v0.2.1...HEAD
+
+`0.2.1`_ - 2021-02-03
+---------------------
+
+.. _0.2.1: https://github.com/trezor/python-shamir-mnemonic/compare/v0.1.0...v0.2.1
+
+Fixed
+~~~~~
+
+- Re-released on the correct commit
+
 
 `0.2.0`_ - 2021-02-03
 ---------------------

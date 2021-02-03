@@ -15,7 +15,7 @@ CWD = Path(__file__).resolve().parent
 
 setup(
     name="shamir-mnemonic",
-    version="0.2.0",
+    version="0.2.1",
     description="SLIP-39 Shamir Mnemonics",
     long_description="\n".join(
         (
