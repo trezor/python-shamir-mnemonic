@@ -1,4 +1,4 @@
-import os.path
+from pathlib import Path
 
 from setuptools import setup
 
@@ -10,17 +10,19 @@ REQUIREMENTS = [
 ]
 # fmt: on
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-
-with open(os.path.join(HERE, "README.rst"), encoding="utf-8") as f:
-    long_description = f.read()
+CWD = Path(__file__).resolve().parent
 
 
 setup(
     name="shamir-mnemonic",
     version="0.2.0",
     description="SLIP-39 Shamir Mnemonics",
-    long_description=long_description,
+    long_description="\n".join(
+        (
+            (CWD / "README.rst").read_text(),
+            (CWD / "CHANGELOG.rst").read_text(),
+        )
+    ),
     url="https://github.com/trezor/python-shamir-mnemonic",
     author="Satoshi Labs",
     packages=["shamir_mnemonic"],
