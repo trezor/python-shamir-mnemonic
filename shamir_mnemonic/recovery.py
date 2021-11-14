@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import attr
 
@@ -62,8 +62,9 @@ class RecoveryState:
         return self.groups_complete() >= self.parameters.group_threshold
 
     def matches(self, share: Share) -> bool:
-        """Check whether the provided share matches the current set, i.e., has the same
-        common parameters.
+        """Check whether the provided share matches the current set.
+
+        That is, whether it has the same common parameters.
         """
         if self.parameters is None:
             return True

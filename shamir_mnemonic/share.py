@@ -51,7 +51,7 @@ class ShareGroupParameters(NamedTuple):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Share:
-    """Represents a single mnemonic share and its metadata"""
+    """Represents a single mnemonic share and its metadata."""
 
     identifier: int
     iteration_exponent: int
@@ -104,7 +104,6 @@ class Share:
 
     def words(self) -> List[str]:
         """Convert share data to a share mnemonic."""
-
         value_word_count = bits_to_words(len(self.value) * 8)
         value_int = int.from_bytes(self.value, "big")
         value_data = _int_to_word_indices(value_int, value_word_count)
@@ -121,7 +120,6 @@ class Share:
     @classmethod
     def from_mnemonic(cls, mnemonic: str) -> "Share":
         """Convert a share mnemonic to share data."""
-
         mnemonic_data = wordlist.mnemonic_to_indices(mnemonic)
 
         if len(mnemonic_data) < MIN_MNEMONIC_LENGTH_WORDS:
@@ -147,7 +145,7 @@ class Share:
         identifier = id_exp_int >> ITERATION_EXP_LENGTH_BITS
         iteration_exponent = id_exp_int & ((1 << ITERATION_EXP_LENGTH_BITS) - 1)
 
-        share_params_data = mnemonic_data[ID_EXP_LENGTH_WORDS : ID_EXP_LENGTH_WORDS + 2]
+        share_params_data = mnemonic_data[ID_EXP_LENGTH_WORDS: ID_EXP_LENGTH_WORDS + 2]
         share_params_int = _int_from_word_indices(share_params_data)
         share_params = int_to_indices(share_params_int, 5, 4)
         group_index, group_threshold, group_count, index, member_threshold = (
@@ -162,7 +160,7 @@ class Share:
             )
 
         value_data = mnemonic_data[
-            ID_EXP_LENGTH_WORDS + 2 : -rs1024.CHECKSUM_LENGTH_WORDS
+            ID_EXP_LENGTH_WORDS + 2: -rs1024.CHECKSUM_LENGTH_WORDS
         ]
         value_byte_count = bits_to_bytes(RADIX_BITS * len(value_data) - padding_len)
         value_int = _int_from_word_indices(value_data)

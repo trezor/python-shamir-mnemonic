@@ -30,7 +30,7 @@ def _get_salt(identifier: int) -> bytes:
 
 
 def encrypt(
-    master_secret: bytes, passphrase: bytes, iteration_exponent: int, identifier: int
+        master_secret: bytes, passphrase: bytes, iteration_exponent: int, identifier: int
 ) -> bytes:
     if len(master_secret) % 2 != 0:
         raise ValueError(
@@ -38,7 +38,7 @@ def encrypt(
         )
 
     l = master_secret[: len(master_secret) // 2]
-    r = master_secret[len(master_secret) // 2 :]
+    r = master_secret[len(master_secret) // 2:]
     salt = _get_salt(identifier)
     for i in range(ROUND_COUNT):
         f = _round_function(i, passphrase, iteration_exponent, salt, r)
@@ -47,10 +47,10 @@ def encrypt(
 
 
 def decrypt(
-    encrypted_master_secret: bytes,
-    passphrase: bytes,
-    iteration_exponent: int,
-    identifier: int,
+        encrypted_master_secret: bytes,
+        passphrase: bytes,
+        iteration_exponent: int,
+        identifier: int,
 ) -> bytes:
     if len(encrypted_master_secret) % 2 != 0:
         raise ValueError(
@@ -58,7 +58,7 @@ def decrypt(
         )
 
     l = encrypted_master_secret[: len(encrypted_master_secret) // 2]
-    r = encrypted_master_secret[len(encrypted_master_secret) // 2 :]
+    r = encrypted_master_secret[len(encrypted_master_secret) // 2:]
     salt = _get_salt(identifier)
     for i in reversed(range(ROUND_COUNT)):
         f = _round_function(i, passphrase, iteration_exponent, salt, r)
