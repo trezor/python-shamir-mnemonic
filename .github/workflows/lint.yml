@@ -1,0 +1,17 @@
+name: lint
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: psf/black@stable
+      - uses: isort/isort-action@v0.1.0
+      - name: Setup python
+        uses: actions/setup-python@v2
+      - name: Install Flake8
+        run: pip install flake8
+      - name: Run Flake8
+        run: flake8 shamir_mnemonic/
