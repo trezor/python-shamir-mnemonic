@@ -4,6 +4,7 @@ from itertools import combinations
 from random import shuffle
 
 import pytest
+
 import shamir_mnemonic as shamir
 from shamir_mnemonic import MnemonicError
 

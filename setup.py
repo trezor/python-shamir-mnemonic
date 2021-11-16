@@ -5,9 +5,19 @@ from setuptools import setup
 # fmt: off
 REQUIREMENTS = [
     "attrs",
-    "click>=7,<8",
+    "click>=7,<9",
     "colorama",
 ]
+EXTRA_REQUIREMENTS = {
+    "dev": [
+        "black",
+        "flake8",
+        "isort"
+    ],
+    "tests": [
+        "pytest"
+    ]
+}
 # fmt: on
 
 CWD = Path(__file__).resolve().parent
@@ -25,9 +35,11 @@ setup(
     ),
     url="https://github.com/trezor/python-shamir-mnemonic",
     author="Satoshi Labs",
+    author_email="info@satoshilabs.com",
     packages=["shamir_mnemonic"],
     python_requires=">=3.6",
     install_requires=REQUIREMENTS,
+    extras_require=EXTRA_REQUIREMENTS,
     package_data={"shamir_mnemonic": ["wordlist.txt"]},
     entry_points={"console_scripts": ["shamir=shamir_mnemonic.cli:cli"]},
     classifiers=[
