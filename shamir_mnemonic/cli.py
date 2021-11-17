@@ -1,15 +1,12 @@
 import secrets
 import sys
-from collections import defaultdict
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Sequence, Tuple
 
-import attr
 import click
 from click import style
 
-from .constants import GROUP_PREFIX_LENGTH_WORDS
 from .recovery import RecoveryState
-from .shamir import combine_mnemonics, generate_mnemonics
+from .shamir import generate_mnemonics
 from .share import Share
 from .utils import MnemonicError
 
@@ -72,7 +69,7 @@ def create(
         )
 
     if (groups or group_threshold is not None) and scheme != "custom":
-        raise click.BadArgumentUsage(f"To use -g/-t, you must select 'custom' scheme.")
+        raise click.BadArgumentUsage("To use -g/-t, you must select 'custom' scheme.")
 
     if scheme == "single":
         group_threshold = 1
@@ -109,7 +106,7 @@ def create(
             secret_bytes = bytes.fromhex(master_secret)
         except Exception as e:
             raise click.BadOptionUsage(
-                "master_secret", f"Secret bytes must be hex encoded"
+                "master_secret", "Secret bytes must be hex encoded"
             ) from e
     else:
         secret_bytes = secrets.token_bytes(strength // 8)
