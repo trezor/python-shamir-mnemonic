@@ -1,16 +1,12 @@
 PYTHON=python3
-SETUP=$(PYTHON) setup.py
+POETRY=poetry
 
 
 build:
-	$(SETUP) build
+	$(POETRY) build
 
 install:
-	$(SETUP) install
-
-dist: clean
-	$(SETUP) sdist
-	$(SETUP) bdist_wheel
+	$(POETRY) install
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -37,12 +33,12 @@ test:
 	pytest
 
 style_check:
-	isort --check-only --recursive shamir_mnemonic/ *.py
+	isort --check-only shamir_mnemonic/ *.py
 	black shamir_mnemonic/ *.py --check
 
 style:
 	black shamir_mnemonic/ *.py
-	isort -y --recursive shamir_mnemonic/ *.py
+	isort shamir_mnemonic/ *.py
 
 
-.PHONY: dist clean clean-build clean-pyc clean-test test style_check style
+.PHONY: clean clean-build clean-pyc clean-test test style_check style

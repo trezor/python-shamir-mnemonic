@@ -43,9 +43,16 @@ With pip from GitHub:
 
 From local checkout for development:
 
+Install the [Poetry](https://python-poetry.org/) tool, checkout
+`python-shamir-mnemonic` from git, and enter the poetry shell:
+
 .. code-block:: console
 
-    $ python3 setup.py develop
+    $ pip3 install poetry
+    $ git clone https://github.com/trezor/python-shamir-mnemonic
+    $ cd python-shamir-mnemonic
+    $ poetry install
+    $ poetry shell
 
 CLI usage
 ---------
