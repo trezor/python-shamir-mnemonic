@@ -3,6 +3,7 @@ import json
 import random
 
 import attr
+from bip32utils import BIP32Key
 
 from shamir_mnemonic import constants, rs1024, shamir, wordlist
 from shamir_mnemonic.share import Share
@@ -14,7 +15,8 @@ def random_bytes(n):
 
 def output(description, mnemonics, secret):
     output.i += 1
-    output.data.append((f"{output.i}. {description}", mnemonics, secret.hex()))
+    xprv = BIP32Key.fromEntropy(secret).ExtendedKey() if secret else ""
+    output.data.append((f"{output.i}. {description}", mnemonics, secret.hex(), xprv))
 
 
 def encode_mnemonic(*args):

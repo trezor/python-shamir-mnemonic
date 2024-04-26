@@ -11,7 +11,7 @@ The format is based on `Keep a Changelog`_, and this project adheres to
 `Unreleased`_
 -------------
 
-No changes yet
+- Added BIP32 master extended private key to test vectors.
 
 .. _Unreleased: https://github.com/trezor/python-shamir-mnemonic/compare/v0.2.2...HEAD
 
