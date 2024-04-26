@@ -4,6 +4,7 @@ from itertools import combinations
 from random import shuffle
 
 import pytest
+from bip32utils import BIP32Key
 
 import shamir_mnemonic as shamir
 from shamir_mnemonic import MnemonicError
@@ -134,11 +135,15 @@ def test_invalid_sharing():
 def test_vectors():
     with open("vectors.json", "r") as f:
         vectors = json.load(f)
-    for description, mnemonics, secret in vectors:
-        if secret:
-            assert bytes.fromhex(secret) == shamir.combine_mnemonics(
+    for description, mnemonics, secret_hex, xprv in vectors:
+        if secret_hex:
+            secret = bytes.fromhex(secret_hex)
+            assert secret == shamir.combine_mnemonics(
                 mnemonics, b"TREZOR"
             ), 'Incorrect secret for test vector "{}".'.format(description)
+            assert (
+                BIP32Key.fromEntropy(secret).ExtendedKey() == xprv
+            ), 'Incorrect xprv for test vector "{}".'.format(description)
         else:
             with pytest.raises(MnemonicError):
                 shamir.combine_mnemonics(mnemonics)
