@@ -34,12 +34,21 @@ def test_passphrase():
     assert MS != shamir.combine_mnemonics(mnemonics[1:4])
 
 
+def test_non_extendable():
+    mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS, extendable=False)[0]
+    assert MS == shamir.combine_mnemonics(mnemonics[1:4])
+
+
 def test_iteration_exponent():
-    mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS, b"TREZOR", 1)[0]
+    mnemonics = shamir.generate_mnemonics(
+        1, [(3, 5)], MS, b"TREZOR", iteration_exponent=1
+    )[0]
     assert MS == shamir.combine_mnemonics(mnemonics[1:4], b"TREZOR")
     assert MS != shamir.combine_mnemonics(mnemonics[1:4])
 
-    mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS, b"TREZOR", 2)[0]
+    mnemonics = shamir.generate_mnemonics(
+        1, [(3, 5)], MS, b"TREZOR", iteration_exponent=2
+    )[0]
     assert MS == shamir.combine_mnemonics(mnemonics[1:4], b"TREZOR")
     assert MS != shamir.combine_mnemonics(mnemonics[1:4])
 
@@ -155,10 +164,8 @@ def test_vectors():
 
 
 def test_split_ems():
-    identifier = 42
-    exponent = 1
     encrypted_master_secret = shamir.EncryptedMasterSecret.from_master_secret(
-        MS, b"TREZOR", identifier, exponent
+        MS, b"TREZOR", identifier=42, extendable=True, iteration_exponent=1
     )
     grouped_shares = shamir.split_ems(1, [(3, 5)], encrypted_master_secret)
     mnemonics = [share.mnemonic() for share in grouped_shares[0]]

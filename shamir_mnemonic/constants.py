@@ -9,11 +9,16 @@ RADIX = 2 ** RADIX_BITS
 ID_LENGTH_BITS = 15
 """The length of the random identifier in bits."""
 
-ITERATION_EXP_LENGTH_BITS = 5
+EXTENDABLE_FLAG_LENGTH_BITS = 1
+"""The length of the extendable backup flag in bits."""
+
+ITERATION_EXP_LENGTH_BITS = 4
 """The length of the iteration exponent in bits."""
 
-ID_EXP_LENGTH_WORDS = bits_to_words(ID_LENGTH_BITS + ITERATION_EXP_LENGTH_BITS)
-"""The length of the random identifier and iteration exponent in words."""
+ID_EXP_LENGTH_WORDS = bits_to_words(
+    ID_LENGTH_BITS + EXTENDABLE_FLAG_LENGTH_BITS + ITERATION_EXP_LENGTH_BITS
+)
+"""The length of the random identifier, extendable backup flag and iteration exponent in words."""
 
 MAX_SHARE_COUNT = 16
 """The maximum number of shares that can be created."""
@@ -24,8 +29,13 @@ CHECKSUM_LENGTH_WORDS = 3
 DIGEST_LENGTH_BYTES = 4
 """The length of the digest of the shared secret in bytes."""
 
-CUSTOMIZATION_STRING = b"shamir"
-"""The customization string used in the RS1024 checksum and in the PBKDF2 salt."""
+CUSTOMIZATION_STRING_ORIG = b"shamir"
+"""The customization string used in the RS1024 checksum and in the PBKDF2 salt for
+shares _without_ the extendable backup flag."""
+
+CUSTOMIZATION_STRING_EXTENDABLE = b"shamir_extendable"
+"""The customization string used in the RS1024 checksum for
+shares _with_ the extendable backup flag."""
 
 GROUP_PREFIX_LENGTH_WORDS = ID_EXP_LENGTH_WORDS + 1
 """The length of the prefix of the mnemonic that is common to a share group."""

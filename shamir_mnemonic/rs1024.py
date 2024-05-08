@@ -1,6 +1,6 @@
 from typing import Iterable, List
 
-from .constants import CHECKSUM_LENGTH_WORDS, CUSTOMIZATION_STRING
+from .constants import CHECKSUM_LENGTH_WORDS
 
 
 def _polymod(values: Iterable[int]) -> int:
@@ -25,11 +25,11 @@ def _polymod(values: Iterable[int]) -> int:
     return chk
 
 
-def create_checksum(data: Iterable[int]) -> List[int]:
-    values = list(CUSTOMIZATION_STRING) + list(data) + [0] * CHECKSUM_LENGTH_WORDS
+def create_checksum(data: Iterable[int], customization_string: bytes) -> List[int]:
+    values = list(customization_string) + list(data) + [0] * CHECKSUM_LENGTH_WORDS
     polymod = _polymod(values) ^ 1
     return [(polymod >> 10 * i) & 1023 for i in reversed(range(CHECKSUM_LENGTH_WORDS))]
 
 
-def verify_checksum(data: Iterable[int]) -> bool:
-    return _polymod(list(CUSTOMIZATION_STRING) + list(data)) == 1
+def verify_checksum(data: Iterable[int], customization_string: bytes) -> bool:
+    return _polymod(list(customization_string) + list(data)) == 1

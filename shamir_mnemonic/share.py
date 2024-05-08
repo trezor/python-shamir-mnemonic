@@ -4,6 +4,9 @@ import attr
 
 from . import rs1024, wordlist
 from .constants import (
+    CUSTOMIZATION_STRING_EXTENDABLE,
+    CUSTOMIZATION_STRING_ORIG,
+    EXTENDABLE_FLAG_LENGTH_BITS,
     ID_EXP_LENGTH_WORDS,
     ITERATION_EXP_LENGTH_BITS,
     METADATA_LENGTH_WORDS,
@@ -29,10 +32,18 @@ def _int_from_word_indices(indices: Iterable[WordIndex]) -> int:
     return value
 
 
+def _customization_string(extendable: bool) -> bytes:
+    if extendable:
+        return CUSTOMIZATION_STRING_EXTENDABLE
+    else:
+        return CUSTOMIZATION_STRING_ORIG
+
+
 class ShareCommonParameters(NamedTuple):
     """Parameters that are common to all shares of a master secret."""
 
     identifier: int
+    extendable: bool
     iteration_exponent: int
     group_threshold: int
     group_count: int
@@ -42,6 +53,7 @@ class ShareGroupParameters(NamedTuple):
     """Parameters that are common to all shares of a master secret, which belong to the same group."""
 
     identifier: int
+    extendable: bool
     iteration_exponent: int
     group_index: int
     group_threshold: int
@@ -54,6 +66,7 @@ class Share:
     """Represents a single mnemonic share and its metadata"""
 
     identifier: int
+    extendable: bool
     iteration_exponent: int
     group_index: int
     group_threshold: int
@@ -66,6 +79,7 @@ class Share:
         """Return values that uniquely identify a matching set of shares."""
         return ShareCommonParameters(
             self.identifier,
+            self.extendable,
             self.iteration_exponent,
             self.group_threshold,
             self.group_count,
@@ -75,6 +89,7 @@ class Share:
         """Return values that uniquely identify shares belonging to the same group."""
         return ShareGroupParameters(
             self.identifier,
+            self.extendable,
             self.iteration_exponent,
             self.group_index,
             self.group_threshold,
@@ -83,9 +98,11 @@ class Share:
         )
 
     def _encode_id_exp(self) -> List[WordIndex]:
-        id_exp_int = (
-            self.identifier << ITERATION_EXP_LENGTH_BITS
-        ) + self.iteration_exponent
+        id_exp_int = self.identifier << (
+            ITERATION_EXP_LENGTH_BITS + EXTENDABLE_FLAG_LENGTH_BITS
+        )
+        id_exp_int += self.extendable << ITERATION_EXP_LENGTH_BITS
+        id_exp_int += self.iteration_exponent
         return _int_to_word_indices(id_exp_int, ID_EXP_LENGTH_WORDS)
 
     def _encode_share_params(self) -> List[WordIndex]:
@@ -110,7 +127,9 @@ class Share:
         value_data = _int_to_word_indices(value_int, value_word_count)
 
         share_data = self._encode_id_exp() + self._encode_share_params() + value_data
-        checksum = rs1024.create_checksum(share_data)
+        checksum = rs1024.create_checksum(
+            share_data, _customization_string(self.extendable)
+        )
 
         return list(wordlist.words_from_indices(share_data + checksum))
 
@@ -134,18 +153,21 @@ class Share:
         if padding_len > 8:
             raise MnemonicError("Invalid mnemonic length.")
 
-        if not rs1024.verify_checksum(mnemonic_data):
+        id_exp_data = mnemonic_data[:ID_EXP_LENGTH_WORDS]
+        id_exp_int = _int_from_word_indices(id_exp_data)
+
+        identifier = id_exp_int >> (
+            EXTENDABLE_FLAG_LENGTH_BITS + ITERATION_EXP_LENGTH_BITS
+        )
+        extendable = bool((id_exp_int >> ITERATION_EXP_LENGTH_BITS) & 1)
+        iteration_exponent = id_exp_int & ((1 << ITERATION_EXP_LENGTH_BITS) - 1)
+
+        if not rs1024.verify_checksum(mnemonic_data, _customization_string(extendable)):
             raise MnemonicError(
                 'Invalid mnemonic checksum for "{} ...".'.format(
                     " ".join(mnemonic.split()[: ID_EXP_LENGTH_WORDS + 2])
                 )
             )
-
-        id_exp_data = mnemonic_data[:ID_EXP_LENGTH_WORDS]
-        id_exp_int = _int_from_word_indices(id_exp_data)
-
-        identifier = id_exp_int >> ITERATION_EXP_LENGTH_BITS
-        iteration_exponent = id_exp_int & ((1 << ITERATION_EXP_LENGTH_BITS) - 1)
 
         share_params_data = mnemonic_data[ID_EXP_LENGTH_WORDS : ID_EXP_LENGTH_WORDS + 2]
         share_params_int = _int_from_word_indices(share_params_data)
@@ -181,6 +203,7 @@ class Share:
 
         return cls(
             identifier,
+            extendable,
             iteration_exponent,
             group_index,
             group_threshold + 1,
