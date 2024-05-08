@@ -12,6 +12,7 @@ The format is based on `Keep a Changelog`_, and this project adheres to
 -------------
 
 - Added BIP32 master extended private key to test vectors.
+- Added support for extendable backup flag.
 
 .. _Unreleased: https://github.com/trezor/python-shamir-mnemonic/compare/v0.2.2...HEAD
 

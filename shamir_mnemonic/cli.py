@@ -33,6 +33,13 @@ def cli() -> None:
     type=int,
     help="Number of groups required for recovery in the custom scheme.",
 )
+@click.option(
+    "-x/-X",
+    "--extendable/--no-extendable",
+    is_flag=True,
+    default=True,
+    help="Extendable backup flag.",
+)
 @click.option("-E", "--exponent", type=int, default=0, help="Iteration exponent.")
 @click.option(
     "-s", "--strength", type=int, default=128, help="Secret strength in bits."
@@ -45,6 +52,7 @@ def create(
     scheme: str,
     groups: Sequence[Tuple[int, int]],
     group_threshold: int,
+    extendable: bool,
     exponent: int,
     master_secret: str,
     passphrase: str,
@@ -123,7 +131,7 @@ def create(
         passphrase_bytes = b""
 
     mnemonics = generate_mnemonics(
-        group_threshold, groups, secret_bytes, passphrase_bytes, exponent
+        group_threshold, groups, secret_bytes, passphrase_bytes, extendable, exponent
     )
 
     for i, (group, (m, n)) in enumerate(zip(mnemonics, groups)):

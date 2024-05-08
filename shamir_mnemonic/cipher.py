@@ -2,7 +2,7 @@ import hashlib
 
 from .constants import (
     BASE_ITERATION_COUNT,
-    CUSTOMIZATION_STRING,
+    CUSTOMIZATION_STRING_ORIG,
     ID_LENGTH_BITS,
     ROUND_COUNT,
 )
@@ -24,13 +24,19 @@ def _round_function(i: int, passphrase: bytes, e: int, salt: bytes, r: bytes) ->
     )
 
 
-def _get_salt(identifier: int) -> bytes:
+def _get_salt(identifier: int, extendable: bool) -> bytes:
+    if extendable:
+        return bytes()
     identifier_len = bits_to_bytes(ID_LENGTH_BITS)
-    return CUSTOMIZATION_STRING + identifier.to_bytes(identifier_len, "big")
+    return CUSTOMIZATION_STRING_ORIG + identifier.to_bytes(identifier_len, "big")
 
 
 def encrypt(
-    master_secret: bytes, passphrase: bytes, iteration_exponent: int, identifier: int
+    master_secret: bytes,
+    passphrase: bytes,
+    iteration_exponent: int,
+    identifier: int,
+    extendable: bool,
 ) -> bytes:
     if len(master_secret) % 2 != 0:
         raise ValueError(
@@ -39,7 +45,7 @@ def encrypt(
 
     l = master_secret[: len(master_secret) // 2]
     r = master_secret[len(master_secret) // 2 :]
-    salt = _get_salt(identifier)
+    salt = _get_salt(identifier, extendable)
     for i in range(ROUND_COUNT):
         f = _round_function(i, passphrase, iteration_exponent, salt, r)
         l, r = r, _xor(l, f)
@@ -51,6 +57,7 @@ def decrypt(
     passphrase: bytes,
     iteration_exponent: int,
     identifier: int,
+    extendable: bool,
 ) -> bytes:
     if len(encrypted_master_secret) % 2 != 0:
         raise ValueError(
@@ -59,7 +66,7 @@ def decrypt(
 
     l = encrypted_master_secret[: len(encrypted_master_secret) // 2]
     r = encrypted_master_secret[len(encrypted_master_secret) // 2 :]
-    salt = _get_salt(identifier)
+    salt = _get_salt(identifier, extendable)
     for i in reversed(range(ROUND_COUNT)):
         f = _round_function(i, passphrase, iteration_exponent, salt, r)
         l, r = r, _xor(l, f)

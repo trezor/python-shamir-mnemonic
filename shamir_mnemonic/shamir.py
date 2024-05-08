@@ -23,6 +23,8 @@ import hmac
 import secrets
 from typing import Any, Dict, Iterable, List, NamedTuple, Sequence, Set, Tuple
 
+import attr
+
 from . import cipher
 from .constants import (
     DIGEST_INDEX,
@@ -99,11 +101,12 @@ class ShareGroup:
             return False
 
 
+@attr.s(auto_attribs=True, frozen=True)
 class EncryptedMasterSecret:
-    def __init__(self, identifier: int, iteration_exponent: int, ciphertext: bytes):
-        self.identifier = identifier
-        self.iteration_exponent = iteration_exponent
-        self.ciphertext = ciphertext
+    identifier: int
+    extendable: bool
+    iteration_exponent: int
+    ciphertext: bytes
 
     @classmethod
     def from_master_secret(
@@ -111,16 +114,23 @@ class EncryptedMasterSecret:
         master_secret: bytes,
         passphrase: bytes,
         identifier: int,
+        extendable: bool,
         iteration_exponent: int,
     ) -> "EncryptedMasterSecret":
         ciphertext = cipher.encrypt(
-            master_secret, passphrase, iteration_exponent, identifier
+            master_secret, passphrase, iteration_exponent, identifier, extendable
         )
-        return EncryptedMasterSecret(identifier, iteration_exponent, ciphertext)
+        return EncryptedMasterSecret(
+            identifier, extendable, iteration_exponent, ciphertext
+        )
 
     def decrypt(self, passphrase: bytes) -> bytes:
         return cipher.decrypt(
-            self.ciphertext, passphrase, self.iteration_exponent, self.identifier
+            self.ciphertext,
+            passphrase,
+            self.iteration_exponent,
+            self.identifier,
+            self.extendable,
         )
 
 
@@ -328,6 +338,7 @@ def split_ems(
         [
             Share(
                 encrypted_master_secret.identifier,
+                encrypted_master_secret.extendable,
                 encrypted_master_secret.iteration_exponent,
                 group_index,
                 group_threshold,
@@ -357,6 +368,7 @@ def generate_mnemonics(
     groups: Sequence[Tuple[int, int]],
     master_secret: bytes,
     passphrase: bytes = b"",
+    extendable: bool = True,
     iteration_exponent: int = 1,
 ) -> List[List[str]]:
     """
@@ -384,7 +396,7 @@ def generate_mnemonics(
 
     identifier = _random_identifier()
     encrypted_master_secret = EncryptedMasterSecret.from_master_secret(
-        master_secret, passphrase, identifier, iteration_exponent
+        master_secret, passphrase, identifier, extendable, iteration_exponent
     )
     grouped_shares = split_ems(group_threshold, groups, encrypted_master_secret)
     return [[share.mnemonic() for share in group] for group in grouped_shares]
@@ -441,7 +453,7 @@ def recover_ems(groups: Dict[int, ShareGroup]) -> EncryptedMasterSecret:
 
     ciphertext = _recover_secret(params.group_threshold, group_shares)
     return EncryptedMasterSecret(
-        params.identifier, params.iteration_exponent, ciphertext
+        params.identifier, params.extendable, params.iteration_exponent, ciphertext
     )
 
 
