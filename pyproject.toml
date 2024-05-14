@@ -19,6 +19,9 @@ pytest = "*"
 black = ">=20"
 isort = "^5"
 
+[tool.poetry.scripts]
+shamir = "shamir_mnemonic.cli:cli"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
