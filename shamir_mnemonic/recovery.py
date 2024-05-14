@@ -101,6 +101,8 @@ class RecoveryState:
             if group.is_complete():
                 reduced_groups[group_index] = group.get_minimal_group()
 
+            # some groups have been added so parameters must be known
+            assert self.parameters is not None
             if len(reduced_groups) >= self.parameters.group_threshold:
                 break
 

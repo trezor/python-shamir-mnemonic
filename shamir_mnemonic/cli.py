@@ -177,6 +177,7 @@ def recover(passphrase_prompt: bool) -> None:
 
     def print_status() -> None:
         bn = style(str(recovery_state.groups_complete()), bold=True)
+        assert recovery_state.parameters is not None
         bt = style(str(recovery_state.parameters.group_threshold), bold=True)
         click.echo()
         if recovery_state.parameters.group_count > 1:
