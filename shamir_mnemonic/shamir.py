@@ -21,7 +21,7 @@
 
 import hmac
 import secrets
-from typing import Any, Dict, Iterable, List, NamedTuple, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Sequence, Set, Tuple
 
 import attr
 
@@ -49,7 +49,7 @@ class ShareGroup:
     def __init__(self) -> None:
         self.shares: Set[Share] = set()
 
-    def __iter__(self) -> Iterable[Share]:
+    def __iter__(self) -> Iterator[Share]:
         return iter(self.shares)
 
     def __len__(self) -> int:
@@ -94,7 +94,7 @@ class ShareGroup:
     def member_threshold(self) -> int:
         return next(iter(self.shares)).member_threshold
 
-    def is_complete(self) -> int:
+    def is_complete(self) -> bool:
         if self.shares:
             return len(self.shares) >= self.member_threshold()
         else:
@@ -295,7 +295,7 @@ def split_ems(
     group_threshold: int,
     groups: Sequence[Tuple[int, int]],
     encrypted_master_secret: EncryptedMasterSecret,
-) -> List[List[str]]:
+) -> List[List[Share]]:
     """
     Split an Encrypted Master Secret into mnemonic shares.
 
