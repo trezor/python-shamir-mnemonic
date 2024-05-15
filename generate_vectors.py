@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import json
 import random
+from dataclasses import astuple
 
-import attr
 from bip32utils import BIP32Key
 
 from shamir_mnemonic import constants, rs1024, shamir, wordlist
@@ -24,7 +24,7 @@ def encode_mnemonic(*args):
 
 
 def decode_mnemonic(mnemonic):
-    return list(attr.astuple(Share.from_mnemonic(mnemonic)))
+    return list(astuple(Share.from_mnemonic(mnemonic)))
 
 
 def generate_mnemonics_random(group_threshold, groups):

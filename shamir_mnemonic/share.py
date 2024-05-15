@@ -1,6 +1,5 @@
+from dataclasses import dataclass
 from typing import Iterable, List, NamedTuple
-
-import attr
 
 from . import rs1024, wordlist
 from .constants import (
@@ -61,7 +60,7 @@ class ShareGroupParameters(NamedTuple):
     member_threshold: int
 
 
-@attr.s(auto_attribs=True, frozen=True)
+@dataclass(frozen=True)
 class Share:
     """Represents a single mnemonic share and its metadata"""
 

@@ -21,9 +21,8 @@
 
 import hmac
 import secrets
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Sequence, Set, Tuple
-
-import attr
 
 from . import cipher
 from .constants import (
@@ -101,7 +100,7 @@ class ShareGroup:
             return False
 
 
-@attr.s(auto_attribs=True, frozen=True)
+@dataclass(frozen=True)
 class EncryptedMasterSecret:
     identifier: int
     extendable: bool

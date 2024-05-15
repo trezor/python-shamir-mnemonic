@@ -8,13 +8,21 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog`_, and this project adheres to
 `Semantic Versioning`_.
 
-`Unreleased`_
--------------
+`0.3.0`_ - 2024-05-15
+---------------------
+
+Added
+~~~~~
 
 - Added BIP32 master extended private key to test vectors.
 - Added support for extendable backup flag.
 
-.. _Unreleased: https://github.com/trezor/python-shamir-mnemonic/compare/v0.2.2...HEAD
+Removed
+~~~~~~~
+
+- Removed dependency on `attrs`.
+
+.. _0.3.0: https://github.com/trezor/python-shamir-mnemonic/compare/v0.2.2...v0.3.0
 
 
 `0.2.2`_ - 2021-12-07

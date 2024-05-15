@@ -1,7 +1,6 @@
 from collections import defaultdict
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, Optional, Tuple
-
-import attr
 
 from .constants import GROUP_PREFIX_LENGTH_WORDS
 from .shamir import ShareGroup, recover_ems
@@ -24,7 +23,7 @@ class RecoveryState:
         if not self.last_share:
             raise RuntimeError("Add at least one share first")
 
-        fake_share = attr.evolve(self.last_share, group_index=group_index)
+        fake_share = replace(self.last_share, group_index=group_index)
         return " ".join(fake_share.words()[:GROUP_PREFIX_LENGTH_WORDS])
 
     def group_status(self, group_index: int) -> Tuple[int, int]:
