@@ -35,11 +35,11 @@ not be used for handling sensitive secrets**.
 Installation
 ------------
 
-With pip from GitHub:
+With pip from PyPI:
 
 .. code-block:: console
 
-    $ pip3 install shamir-mnemonic
+    $ pip3 install shamir-mnemonic[cli]  # for CLI tool
 
 From local checkout for development:
 

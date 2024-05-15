@@ -11,11 +11,26 @@ The format is based on `Keep a Changelog`_, and this project adheres to
 `0.3.0`_ - 2024-05-15
 ---------------------
 
+Incompatible
+~~~~~~~~~~~~
+
+- The `shamir` command no longer works out of the box. It is necessary to install the
+  `cli` extra while installing the package. See README for instructions.
+
 Added
 ~~~~~
 
 - Added BIP32 master extended private key to test vectors.
 - Added support for extendable backup flag.
+
+Changed
+~~~~~~~
+
+- The `shamir_mnemonic` package now has zero extra dependencies on Python 3.7 and up,
+  making it more suitable as a dependency of other projects.
+- The `shamir` CLI still requires `click`. A new extra `cli` was introduced to handle
+  this dependency. Use the command `pip install shamir-mnemonic[cli]` to install the CLI
+  dependencies along with the package.
 
 Removed
 ~~~~~~~

@@ -2,8 +2,14 @@ import secrets
 import sys
 from typing import Sequence, Tuple
 
-import click
-from click import style
+try:
+    import click
+    from click import style
+
+except ImportError:
+    print("Required dependencies are missing. Install them with:")
+    print("  pip install shamir_mnemonic[cli]")
+    sys.exit(1)
 
 from .recovery import RecoveryState
 from .shamir import generate_mnemonics

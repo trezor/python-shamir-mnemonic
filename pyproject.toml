@@ -11,14 +11,17 @@ readme = [
 
 [tool.poetry.dependencies]
 python = ">=3.6,<4.0"
-click = ">=7,<9"
 dataclasses = { version = "*", python = "<=3.6" }
+click = { version = ">=7,<9", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 bip32utils = "^0.3.post4"
 pytest = "*"
 black = ">=20"
 isort = "^5"
+
+[tool.poetry.extras]
+cli = ["click"]
 
 [tool.poetry.scripts]
 shamir = "shamir_mnemonic.cli:cli"
