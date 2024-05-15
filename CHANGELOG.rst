@@ -48,7 +48,7 @@ Fixed
 Added
 ~~~~~
 
-- Introduce `slip_ems` and `recover_ems` to separate password-based encryption from the Shamir Secret recovery
+- Introduce `split_ems` and `recover_ems` to separate password-based encryption from the Shamir Secret recovery
 - Introduce classes representing a share and group-common parameters
 - Introduce `RecoveryState` class that allows reusing the logic of the `shamir recover` command
 
