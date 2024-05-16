@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 The format is based on `Keep a Changelog`_, and this project adheres to
 `Semantic Versioning`_.
 
+`0.3.1`_ - Unreleased
+---------------------
+
+(no changes yet)
+
+.. _0.3.1: https://github.com/trezor/python-shamir-mnemonic/compare/v0.3.0...HEAD
+
 `0.3.0`_ - 2024-05-15
 ---------------------
 
