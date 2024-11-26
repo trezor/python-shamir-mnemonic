@@ -1,6 +1,7 @@
 import secrets
 import sys
 from typing import Sequence, Tuple
+import codecs
 
 try:
     import click
@@ -50,9 +51,7 @@ def cli() -> None:
 @click.option(
     "-s", "--strength", type=int, default=128, help="Secret strength in bits."
 )
-@click.option(
-    "-S", "--master-secret", help="Hex-encoded custom master secret.", metavar="HEX"
-)
+@click.option("-S", "--master-secret", help="String master secret.")
 @click.option("-p", "--passphrase", help="Supply passphrase for recovery.")
 def create(
     scheme: str,
@@ -117,11 +116,10 @@ def create(
 
     if master_secret is not None:
         try:
-            secret_bytes = bytes.fromhex(master_secret)
+            master_secret_hex = master_secret.encode().hex()
+            secret_bytes = bytes.fromhex(master_secret_hex)
         except Exception as e:
-            raise click.BadOptionUsage(
-                "master_secret", "Secret bytes must be hex encoded"
-            ) from e
+            raise click.BadOptionUsage("master_secret error", str(e)) from e
     else:
         secret_bytes = secrets.token_bytes(strength // 8)
 
@@ -229,7 +227,10 @@ def recover(passphrase_prompt: bool) -> None:
         click.echo("Recovery failed")
         sys.exit(1)
     click.secho("SUCCESS!", fg="green", bold=True)
-    click.echo(f"Your master secret is: {master_secret.hex()}")
+    click.echo(f"Your master secret is (hex): {master_secret.hex()}")
+    click.echo(
+        f"Your master secret is (str): {codecs.decode(master_secret.hex(), 'hex').decode('utf-8')}"
+    )
 
 
 if __name__ == "__main__":
