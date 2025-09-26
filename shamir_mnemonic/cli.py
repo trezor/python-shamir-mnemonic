@@ -1,6 +1,6 @@
 import secrets
 import sys
-from typing import Sequence, Tuple
+from typing import Iterable, Optional, Sequence, Tuple
 
 try:
     import click
@@ -12,7 +12,7 @@ except ImportError:
     sys.exit(1)
 
 from .recovery import RecoveryState
-from .shamir import generate_mnemonics
+from .shamir import generate_mnemonics, group_ems_mnemonics
 from .share import Share
 from .utils import MnemonicError
 
@@ -168,11 +168,14 @@ def error(s: str) -> None:
     "-p", "--passphrase-prompt", is_flag=True, help="Use passphrase after recovering"
 )
 def recover(passphrase_prompt: bool) -> None:
-    recovery_state = RecoveryState()
+    recovery(passphrase_prompt)
+
+
+def recovery(passphrase_prompt: bool) -> None:
 
     def print_group_status(idx: int) -> None:
-        group_size, group_threshold = recovery_state.group_status(idx)
-        group_prefix = style(recovery_state.group_prefix(idx), bold=True)
+        group_size, group_threshold = recovery.state.group_status(idx)
+        group_prefix = style(recovery.state.group_prefix(idx), bold=True)
         bi = style(str(group_size), bold=True)
         if not group_size:
             click.echo(f"{EMPTY} {bi} shares from group {group_prefix}")
@@ -182,27 +185,27 @@ def recover(passphrase_prompt: bool) -> None:
             click.echo(f"{prefix} {bi} of {bt} shares needed from group {group_prefix}")
 
     def print_status() -> None:
-        bn = style(str(recovery_state.groups_complete()), bold=True)
-        assert recovery_state.parameters is not None
-        bt = style(str(recovery_state.parameters.group_threshold), bold=True)
+        bn = style(str(recovery.state.groups_complete()), bold=True)
+        assert recovery.state.parameters is not None
+        bt = style(str(recovery.state.parameters.group_threshold), bold=True)
         click.echo()
-        if recovery_state.parameters.group_count > 1:
+        if recovery.state.parameters.group_count > 1:
             click.echo(f"Completed {bn} of {bt} groups needed:")
-        for i in range(recovery_state.parameters.group_count):
+        for i in range(recovery.state.parameters.group_count):
             print_group_status(i)
 
-    while not recovery_state.is_complete():
+    while not recovery.state.is_complete():
         try:
             mnemonic_str = click.prompt("Enter a recovery share")
             share = Share.from_mnemonic(mnemonic_str)
-            if not recovery_state.matches(share):
+            if not recovery.state.matches(share):
                 error("This mnemonic is not part of the current set. Please try again.")
                 continue
-            if share in recovery_state:
+            if share in recovery.state:
                 error("Share already entered.")
                 continue
 
-            recovery_state.add_share(share)
+            recovery.state.add_share(share)
             print_status()
 
         except click.Abort:
@@ -223,13 +226,71 @@ def recover(passphrase_prompt: bool) -> None:
                 click.echo("Passphrase must be ASCII. Please try again.")
 
     try:
-        master_secret = recovery_state.recover(passphrase_bytes)
+        master_secret = recovery.state.recover(passphrase_bytes)
     except MnemonicError as e:
         error(str(e))
         click.echo("Recovery failed")
         sys.exit(1)
     click.secho("SUCCESS!", fg="green", bold=True)
     click.echo(f"Your master secret is: {master_secret.hex()}")
+
+
+recovery.state = RecoveryState()
+
+
+@cli.command()
+@click.option(
+    "-p", "--passphrase-prompt", is_flag=True, help="Use passphrase after recovering"
+)
+@click.option(
+    "-c",
+    "--change",
+    "expand",
+    type=(int, int),
+    metavar="G T",
+    multiple=True,
+    help="Expand the T-of-N group G to the desired new T.",
+)
+@click.option(
+    "-s/-S",
+    "--strict/--no-strict",
+    is_flag=True,
+    default=False,
+    help="Be strict to enforce mnemonics and desired group expand validity.",
+)
+@click.option(
+    "-c/-C",
+    "--complete/--no-complete",
+    is_flag=True,
+    default=False,
+    help="Try to use and assign every mnemonic supplied, even if not necessary for recovery.",
+)
+def expand(
+    passphrase_prompt: bool,
+    expand: Iterable[Tuple[int, Optional[int]]],
+    strict: bool,
+    complete: bool,
+) -> None:
+    """Recover and expand a Shamir mnemonic set
+
+    Displays the (possibly expanded) mnemonics recovered.
+    """
+    recovery(passphrase_prompt)
+    mnemonics = set.union(*(sg.shares for sg in recovery.state.groups.values()))
+    expand = dict(expand)
+    ((ems, expanded),) = group_ems_mnemonics(
+        mnemonics=mnemonics,
+        strict=strict,
+        complete=complete,
+        expand=expand.items(),
+    )
+    for group, mnems in sorted(expanded.items()):
+        if group in expand:
+            click.echo(f"Group {group} (expanded to {expand[group] or 'default'}):")
+        else:
+            click.echo(f"Group {group}:")
+        for mn in mnems:
+            click.echo(f" {mn}")
 
 
 if __name__ == "__main__":

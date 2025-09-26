@@ -6,6 +6,7 @@ from .shamir import (
     combine_mnemonics,
     decode_mnemonics,
     generate_mnemonics,
+    group_ems_mnemonics,
     recover_ems,
     split_ems,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "combine_mnemonics",
     "decode_mnemonics",
     "generate_mnemonics",
+    "group_ems_mnemonics",
     "split_ems",
     "recover_ems",
     "EncryptedMasterSecret",

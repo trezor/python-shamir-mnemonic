@@ -136,6 +136,9 @@ class Share:
         """Convert share data to a share mnemonic."""
         return " ".join(self.words())
 
+    def __str__(self) -> str:
+        return self.mnemonic()
+
     @classmethod
     def from_mnemonic(cls, mnemonic: str) -> "Share":
         """Convert a share mnemonic to share data."""

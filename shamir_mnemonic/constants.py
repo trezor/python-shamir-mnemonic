@@ -3,7 +3,7 @@ from .utils import bits_to_words
 RADIX_BITS = 10
 """The length of the radix in bits."""
 
-RADIX = 2 ** RADIX_BITS
+RADIX = 2**RADIX_BITS
 """The number of words in the wordlist."""
 
 ID_LENGTH_BITS = 15

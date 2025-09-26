@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from typing import Any, Dict, Optional, Tuple
 
 from .constants import GROUP_PREFIX_LENGTH_WORDS
