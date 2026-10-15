@@ -402,5 +402,39 @@
     ],
     "8dc652d6d6cd370d8c963141f6d79ba440300f25c467302c1d966bff8f62300d",
     "xprv9s21ZrQH143K2eFW2zmu3aayWWd6MJZBG7RebW35fiKcoCZ6jFi6U5gzffB9McDdiKTecUtRqJH9GzueCXiQK1LaQXdgthS8DgWfC8Uu3z7"
+  ],
+  [
+    "46. Valid mnemonic without sharing with a share value starting with a zero byte (128 bits)",
+    [
+      "obesity isolate academic academic academic hand voter acid profile adult fangs shaped pupal unfair again jump flip have phantom genuine"
+    ],
+    "ce446976050c18fc04db6729afe41d3e",
+    "xprv9s21ZrQH143K4QnuVdGPZ5NvqQ5ESTAHFTa8dD1tztjtsXdw9uAJ53XpLNrCQ8j6vzD9KRgPYu1dvtWjgoPANnAAUBivSHvDNY4DHeCK56M"
+  ],
+  [
+    "47. Extendable basic sharing 2-of-3 with a share value starting with a zero byte (128 bits)",
+    [
+      "join lilac academic acid academic taste dining mild axle taxi arcade machine detailed lyrics music tidy crush medal temple describe",
+      "join lilac academic always antenna endorse vegan sympathy piece transfer duckling trust aviation liquid friendly order corner obtain trial ladybug"
+    ],
+    "cbbbf69fbeae8c459fa66a23b6fa520b",
+    "xprv9s21ZrQH143K311g1uG5b6La3YN2oCfGhqX8CL4aEGXhMveoV63cfrDuaQtSLsoyU2rBg92dYPDpGQCpQYX2HkCDrz7xJLv3miio9mAAWNe"
+  ],
+  [
+    "48. Valid mnemonic without sharing with a share value starting with a zero byte (256 bits)",
+    [
+      "quiet upgrade academic academic academic beam knit story unfold painting tackle blue decent mayor juice cleanup spew primary envelope beam orbit change artist escape round switch critical holiday gray daisy ancestor year visual"
+    ],
+    "40bb35a1418cd195fcc2741ca6c9ea15a5bcd641026caee880362fb7d4e76ec5",
+    "xprv9s21ZrQH143K2mJukVBhr7emSCyqQBaVeFci1Q3T3k4HRvYRZSj4hJ86MSMaYRMNNpqV3CkgbgvXJ9qnTZ9npdwBBuQkv6HDj5CHKcuCKSC"
+  ],
+  [
+    "49. Extendable basic sharing 2-of-3 with a share value starting with a zero byte (256 bits)",
+    [
+      "worthy biology academic always academic benefit safari yelp software black analysis rumor legend beard database physics video deal luck universe dish camera practice privacy holy starting scandal depend romantic observe august costume greatest",
+      "worthy biology academic agency apart rainbow smear picture plan revenue suitable retailer pistol evoke metric have prevent extend adorn invasion crazy owner seafood laundry quick total join enlarge practice budget guilt income legend"
+    ],
+    "fc7863360fb48b6501ff9a35b789f1da1736e56e29921eec0315355fa967713c",
+    "xprv9s21ZrQH143K2sFkbeaxnEJYjxMdan7vfkD5TkhRpL4er9D6jd3KtUYUJEyNjmDy9Y9bX6fM2w1T4WDeftHJAhE2bXxPXyAQKxQUNi1JcdL"
   ]
 ]

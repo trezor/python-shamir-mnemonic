@@ -204,6 +204,31 @@ if __name__ == "__main__":
         )
         output(description.format(8 * n), random.sample(groups[0], 2), secret)
 
+    # Share values starting with a zero byte. An implementation which carries the share value
+    # as an integer drops the leading zero byte, which changes the value or the number of words.
+    for n in [16, 32]:
+        description = "Valid mnemonic without sharing with a share value starting with a zero byte ({} bits)"
+        while True:
+            secret = random_bytes(n)
+            groups = shamir.generate_mnemonics(
+                1, [(1, 1)], secret, b"TREZOR", extendable=False, iteration_exponent=0
+            )
+            if Share.from_mnemonic(groups[0][0]).value[0] == 0:
+                break
+        output(description.format(8 * n), groups[0], secret)
+
+        description = "Extendable basic sharing 2-of-3 with a share value starting with a zero byte ({} bits)"
+        while True:
+            secret = random_bytes(n)
+            groups = shamir.generate_mnemonics(
+                1, [(2, 3)], secret, b"TREZOR", extendable=True, iteration_exponent=0
+            )
+            zero = [m for m in groups[0] if Share.from_mnemonic(m).value[0] == 0]
+            if zero:
+                break
+        others = [m for m in groups[0] if m not in zero]
+        output(description.format(8 * n), [zero[0]] + random.sample(others, 1), secret)
+
     with open("vectors.json", "w") as f:
         json.dump(
             output.data,
