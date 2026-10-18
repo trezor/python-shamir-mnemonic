@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable, List, NamedTuple
 
 from . import rs1024, wordlist
@@ -72,7 +72,7 @@ class Share:
     group_count: int
     index: int
     member_threshold: int
-    value: bytes
+    value: bytes = field(repr=False)
 
     def common_parameters(self) -> ShareCommonParameters:
         """Return values that uniquely identify a matching set of shares."""

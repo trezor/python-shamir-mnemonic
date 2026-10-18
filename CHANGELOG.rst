@@ -11,7 +11,10 @@ The format is based on `Keep a Changelog`_, and this project adheres to
 `0.3.1`_ - Unreleased
 ---------------------
 
-(no changes yet)
+Fixed
+~~~~~
+
+- `Share` and `EncryptedMasterSecret` no longer show secret bytes in their repr.
 
 .. _0.3.1: https://github.com/trezor/python-shamir-mnemonic/compare/v0.3.0...HEAD
 
