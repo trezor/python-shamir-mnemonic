@@ -174,6 +174,28 @@ def test_split_ems():
     assert recovered == MS
 
 
+def test_non_ascii_passphrase():
+    passphrase = "café".encode()
+    with pytest.raises(ValueError):
+        shamir.generate_mnemonics(1, [(3, 5)], MS, passphrase)
+    with pytest.raises(ValueError):
+        shamir.EncryptedMasterSecret.from_master_secret(
+            MS, passphrase, identifier=42, extendable=True, iteration_exponent=1
+        )
+    with pytest.raises(ValueError):
+        shamir.encrypt(MS, passphrase, 1, 42, True)
+
+
+def test_recover_non_ascii_passphrase():
+    # Made by version 0.3.0 with EncryptedMasterSecret.from_master_secret and
+    # split_ems, which accepted the passphrase "café".
+    mnemonic = (
+        "acid fawn academic academic company fridge picture cage pecan glance "
+        "privacy carpet should public pharmacy eclipse percent python together flavor"
+    )
+    assert shamir.combine_mnemonics([mnemonic], "café".encode()) == MS
+
+
 def test_recover_ems():
     mnemonics = shamir.generate_mnemonics(1, [(3, 5)], MS, b"TREZOR")[0]
 
