@@ -21,7 +21,7 @@
 
 import hmac
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Sequence, Set, Tuple
 
 from . import cipher
@@ -105,7 +105,7 @@ class EncryptedMasterSecret:
     identifier: int
     extendable: bool
     iteration_exponent: int
-    ciphertext: bytes
+    ciphertext: bytes = field(repr=False)
 
     @classmethod
     def from_master_secret(

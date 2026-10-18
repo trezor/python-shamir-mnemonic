@@ -181,3 +181,13 @@ def test_recover_ems():
     encrypted_master_secret = shamir.recover_ems(groups)
     recovered = encrypted_master_secret.decrypt(b"TREZOR")
     assert recovered == MS
+
+
+def test_repr_hides_secret():
+    encrypted_master_secret = shamir.EncryptedMasterSecret.from_master_secret(
+        MS, b"", identifier=42, extendable=True, iteration_exponent=1
+    )
+    assert repr(encrypted_master_secret.ciphertext) not in repr(encrypted_master_secret)
+
+    share = shamir.split_ems(1, [(3, 5)], encrypted_master_secret)[0][0]
+    assert repr(share.value) not in repr(share)
