@@ -11,6 +11,13 @@ The format is based on `Keep a Changelog`_, and this project adheres to
 `0.3.1`_ - Unreleased
 ---------------------
 
+Changed
+~~~~~~~
+
+- `encrypt` and `EncryptedMasterSecret.from_master_secret` now refuse a passphrase
+  that is not printable ASCII, as `generate_mnemonics` already did. Shares made with
+  such a passphrase can still be recovered.
+
 Fixed
 ~~~~~
 
