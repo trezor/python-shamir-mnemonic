@@ -131,7 +131,7 @@ def create(
     if passphrase:
         try:
             passphrase_bytes = passphrase.encode("ascii")
-        except UnicodeDecodeError:
+        except UnicodeEncodeError:
             raise click.ClickException("Passphrase must be ASCII only")
     else:
         passphrase_bytes = b""
@@ -219,7 +219,7 @@ def recover(passphrase_prompt: bool) -> None:
             try:
                 passphrase_bytes = passphrase.encode("ascii")
                 break
-            except UnicodeDecodeError:
+            except UnicodeEncodeError:
                 click.echo("Passphrase must be ASCII. Please try again.")
 
     try:
