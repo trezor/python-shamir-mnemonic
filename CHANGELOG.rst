@@ -15,6 +15,9 @@ Fixed
 ~~~~~
 
 - `Share` and `EncryptedMasterSecret` no longer show secret bytes in their repr.
+- `encrypt` and `EncryptedMasterSecret.from_master_secret` now refuse a passphrase
+  that is not printable ASCII, as `generate_mnemonics` already did. Shares made with
+  such a passphrase can still be recovered.
 
 .. _0.3.1: https://github.com/trezor/python-shamir-mnemonic/compare/v0.3.0...HEAD
 

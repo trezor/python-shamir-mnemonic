@@ -388,11 +388,6 @@ def generate_mnemonics(
     :param int iteration_exponent: The encryption iteration exponent.
     :return: List of groups mnemonics.
     """
-    if not all(32 <= c <= 126 for c in passphrase):
-        raise ValueError(
-            "The passphrase must contain only printable ASCII characters (code points 32-126)."
-        )
-
     identifier = _random_identifier()
     encrypted_master_secret = EncryptedMasterSecret.from_master_secret(
         master_secret, passphrase, identifier, extendable, iteration_exponent
