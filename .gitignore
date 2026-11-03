@@ -9,4 +9,3 @@ __pycache__
 
 *.swp
 *.py[co]
-poetry.lock
