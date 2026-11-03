@@ -18,14 +18,16 @@ dev = [
     "bip32utils>=0.3.post4,<0.4",
     "click>=7,<9",
     "pytest",
-    "black>=20",
-    "isort>=5,<6",
+    "ruff",
 ]
 
 [build-system]
-requires = ["uv_build>=0.8,<0.13"]
-build-backend = "uv_build"
+requires = ["flit_core>=3.11,<4"]
+build-backend = "flit_core.buildapi"
 
-[tool.uv.build-backend]
-module-name = "shamir_mnemonic"
-module-root = ""
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "RUF"]
+ignore = ["E501", "E741", "SIM300"]
+
+[tool.flit.sdist]
+include = ["CHANGELOG.rst", "test_*.py", "vectors.json"]

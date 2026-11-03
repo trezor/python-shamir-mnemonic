@@ -1,6 +1,6 @@
 import secrets
 import sys
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 try:
     import click
@@ -56,7 +56,7 @@ def cli() -> None:
 @click.option("-p", "--passphrase", help="Supply passphrase for recovery.")
 def create(
     scheme: str,
-    groups: Sequence[Tuple[int, int]],
+    groups: Sequence[tuple[int, int]],
     group_threshold: int,
     extendable: bool,
     exponent: int,
@@ -131,8 +131,8 @@ def create(
     if passphrase:
         try:
             passphrase_bytes = passphrase.encode("ascii")
-        except UnicodeEncodeError:
-            raise click.ClickException("Passphrase must be ASCII only")
+        except UnicodeEncodeError as e:
+            raise click.ClickException("Passphrase must be ASCII only") from e
     else:
         passphrase_bytes = b""
 

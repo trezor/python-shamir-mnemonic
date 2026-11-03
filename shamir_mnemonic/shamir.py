@@ -21,8 +21,9 @@
 
 import hmac
 import secrets
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, Iterator, List, NamedTuple, Sequence, Set, Tuple
+from typing import Any, NamedTuple
 
 from . import cipher
 from .constants import (
@@ -46,7 +47,7 @@ class RawShare(NamedTuple):
 
 class ShareGroup:
     def __init__(self) -> None:
-        self.shares: Set[Share] = set()
+        self.shares: set[Share] = set()
 
     def __iter__(self) -> Iterator[Share]:
         return iter(self.shares)
@@ -74,14 +75,14 @@ class ShareGroup:
 
         self.shares.add(share)
 
-    def to_raw_shares(self) -> List[RawShare]:
+    def to_raw_shares(self) -> list[RawShare]:
         return [RawShare(s.index, s.value) for s in self.shares]
 
     def get_minimal_group(self) -> "ShareGroup":
         group = ShareGroup()
-        group.shares = set(
+        group.shares = {
             share for _, share in zip(range(self.member_threshold()), self.shares)
-        )
+        }
         return group
 
     def common_parameters(self) -> ShareCommonParameters:
@@ -137,7 +138,7 @@ RANDOM_BYTES = secrets.token_bytes
 """Source of random bytes. Can be overriden for deterministic testing."""
 
 
-def _precompute_exp_log() -> Tuple[List[int], List[int]]:
+def _precompute_exp_log() -> tuple[list[int], list[int]]:
     exp = [0 for i in range(255)]
     log = [0 for i in range(256)]
 
@@ -170,12 +171,12 @@ def _interpolate(shares: Sequence[RawShare], x: int) -> bytes:
     :rtype: Array of bytes.
     """
 
-    x_coordinates = set(share.x for share in shares)
+    x_coordinates = {share.x for share in shares}
 
     if len(x_coordinates) != len(shares):
         raise MnemonicError("Invalid set of shares. Share indices must be unique.")
 
-    share_value_lengths = set(len(share.data) for share in shares)
+    share_value_lengths = {len(share.data) for share in shares}
     if len(share_value_lengths) != 1:
         raise MnemonicError(
             "Invalid set of shares. All share values must have the same length."
@@ -217,7 +218,7 @@ def _create_digest(random_data: bytes, shared_secret: bytes) -> bytes:
 
 def _split_secret(
     threshold: int, share_count: int, shared_secret: bytes
-) -> List[RawShare]:
+) -> list[RawShare]:
     if threshold < 1:
         raise ValueError("The requested threshold must be a positive integer.")
 
@@ -244,7 +245,8 @@ def _split_secret(
     random_part = RANDOM_BYTES(len(shared_secret) - DIGEST_LENGTH_BYTES)
     digest = _create_digest(random_part, shared_secret)
 
-    base_shares = shares + [
+    base_shares = [
+        *shares,
         RawShare(DIGEST_INDEX, digest + random_part),
         RawShare(SECRET_INDEX, shared_secret),
     ]
@@ -271,9 +273,9 @@ def _recover_secret(threshold: int, shares: Sequence[RawShare]) -> bytes:
     return shared_secret
 
 
-def decode_mnemonics(mnemonics: Iterable[str]) -> Dict[int, ShareGroup]:
-    common_params: Set[ShareCommonParameters] = set()
-    groups: Dict[int, ShareGroup] = {}
+def decode_mnemonics(mnemonics: Iterable[str]) -> dict[int, ShareGroup]:
+    common_params: set[ShareCommonParameters] = set()
+    groups: dict[int, ShareGroup] = {}
     for mnemonic in mnemonics:
         share = Share.from_mnemonic(mnemonic)
         common_params.add(share.common_parameters())
@@ -292,9 +294,9 @@ def decode_mnemonics(mnemonics: Iterable[str]) -> Dict[int, ShareGroup]:
 
 def split_ems(
     group_threshold: int,
-    groups: Sequence[Tuple[int, int]],
+    groups: Sequence[tuple[int, int]],
     encrypted_master_secret: EncryptedMasterSecret,
-) -> List[List[Share]]:
+) -> list[list[Share]]:
     """
     Split an Encrypted Master Secret into mnemonic shares.
 
@@ -364,12 +366,12 @@ def _random_identifier() -> int:
 
 def generate_mnemonics(
     group_threshold: int,
-    groups: Sequence[Tuple[int, int]],
+    groups: Sequence[tuple[int, int]],
     master_secret: bytes,
     passphrase: bytes = b"",
     extendable: bool = True,
     iteration_exponent: int = 1,
-) -> List[List[str]]:
+) -> list[list[str]]:
     """
     Split a master secret into mnemonic shares using Shamir's secret sharing scheme.
 
@@ -401,7 +403,7 @@ def generate_mnemonics(
     return [[share.mnemonic() for share in group] for group in grouped_shares]
 
 
-def recover_ems(groups: Dict[int, ShareGroup]) -> EncryptedMasterSecret:
+def recover_ems(groups: dict[int, ShareGroup]) -> EncryptedMasterSecret:
     """
     Combine shares, recover metadata and the Encrypted Master Secret.
 

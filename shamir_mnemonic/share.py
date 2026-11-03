@@ -1,5 +1,6 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable, List, NamedTuple
+from typing import NamedTuple
 
 from . import rs1024, wordlist
 from .constants import (
@@ -18,7 +19,7 @@ from .utils import MnemonicError, bits_to_bytes, bits_to_words, int_to_indices
 WordIndex = int
 
 
-def _int_to_word_indices(value: int, length: int) -> List[WordIndex]:
+def _int_to_word_indices(value: int, length: int) -> list[WordIndex]:
     """Converts an integer value to a list of base 1024 indices in big endian order."""
     return list(int_to_indices(value, length, radix_bits=RADIX_BITS))
 
@@ -96,7 +97,7 @@ class Share:
             self.member_threshold,
         )
 
-    def _encode_id_exp(self) -> List[WordIndex]:
+    def _encode_id_exp(self) -> list[WordIndex]:
         id_exp_int = self.identifier << (
             ITERATION_EXP_LENGTH_BITS + EXTENDABLE_FLAG_LENGTH_BITS
         )
@@ -104,7 +105,7 @@ class Share:
         id_exp_int += self.iteration_exponent
         return _int_to_word_indices(id_exp_int, ID_EXP_LENGTH_WORDS)
 
-    def _encode_share_params(self) -> List[WordIndex]:
+    def _encode_share_params(self) -> list[WordIndex]:
         # each value is 4 bits, for 20 bits total
         val = self.group_index
         val <<= 4
@@ -118,7 +119,7 @@ class Share:
         # group parameters are 2 words
         return _int_to_word_indices(val, 2)
 
-    def words(self) -> List[str]:
+    def words(self) -> list[str]:
         """Convert share data to a share mnemonic."""
 
         value_word_count = bits_to_words(len(self.value) * 8)

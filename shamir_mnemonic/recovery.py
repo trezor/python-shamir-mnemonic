@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections import defaultdict
-from dataclasses import dataclass, field, replace
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import replace
+from typing import Any
 
 from .constants import GROUP_PREFIX_LENGTH_WORDS
 from .shamir import ShareGroup, recover_ems
@@ -14,9 +16,9 @@ class RecoveryState:
     """Object for keeping track of running Shamir recovery."""
 
     def __init__(self) -> None:
-        self.last_share: Optional[Share] = None
-        self.groups: Dict[int, ShareGroup] = defaultdict(ShareGroup)
-        self.parameters: Optional[ShareCommonParameters] = None
+        self.last_share: Share | None = None
+        self.groups: dict[int, ShareGroup] = defaultdict(ShareGroup)
+        self.parameters: ShareCommonParameters | None = None
 
     def group_prefix(self, group_index: int) -> str:
         """Return three starting words of a given group."""
@@ -26,7 +28,7 @@ class RecoveryState:
         fake_share = replace(self.last_share, group_index=group_index)
         return " ".join(fake_share.words()[:GROUP_PREFIX_LENGTH_WORDS])
 
-    def group_status(self, group_index: int) -> Tuple[int, int]:
+    def group_status(self, group_index: int) -> tuple[int, int]:
         """Return completion status of given group.
 
         Result consists of the number of shares already entered, and the threshold
@@ -95,7 +97,7 @@ class RecoveryState:
     def recover(self, passphrase: bytes) -> bytes:
         """Recover the master secret, given a passphrase."""
         # Select a subset of shares which meets the thresholds.
-        reduced_groups: Dict[int, ShareGroup] = {}
+        reduced_groups: dict[int, ShareGroup] = {}
         for group_index, group in self.groups.items():
             if group.is_complete():
                 reduced_groups[group_index] = group.get_minimal_group()

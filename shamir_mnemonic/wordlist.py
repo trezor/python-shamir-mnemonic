@@ -1,12 +1,12 @@
 import os.path
-from typing import Dict, Iterable, List, Sequence, Tuple
+from collections.abc import Iterable, Sequence
 
 from .constants import RADIX
 from .utils import MnemonicError
 
 
-def _load_wordlist() -> Tuple[List[str], Dict[str, int]]:
-    with open(os.path.join(os.path.dirname(__file__), "wordlist.txt"), "r") as f:
+def _load_wordlist() -> tuple[list[str], dict[str, int]]:
+    with open(os.path.join(os.path.dirname(__file__), "wordlist.txt")) as f:
         wordlist = [word.strip() for word in f]
 
     if len(wordlist) != RADIX:

@@ -33,12 +33,11 @@ test:
 	uv run pytest
 
 style_check:
-	uv run isort --check-only shamir_mnemonic/ *.py
-	uv run black shamir_mnemonic/ *.py --check
+	uv run ruff check .
+	uv run ruff format --check .
 
 style:
-	uv run black shamir_mnemonic/ *.py
-	uv run isort shamir_mnemonic/ *.py
-
+	uv run ruff check --fix .
+	uv run ruff format .
 
 .PHONY: clean clean-build clean-pyc clean-test test style_check style

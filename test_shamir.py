@@ -1,4 +1,6 @@
+import functools
 import json
+import operator
 import secrets
 from itertools import combinations
 from random import shuffle
@@ -79,7 +81,7 @@ def test_group_sharing():
 
     # One complete group and one incomplete group out of two groups required.
     with pytest.raises(MnemonicError):
-        shamir.combine_mnemonics(mnemonics[0][2:] + [mnemonics[1][0]])
+        shamir.combine_mnemonics([*mnemonics[0][2:], mnemonics[1][0]])
 
     # One group of two required.
     with pytest.raises(MnemonicError):
@@ -108,7 +110,7 @@ def test_all_groups_exist():
             group_threshold, [(3, 5), (1, 1), (2, 3), (2, 5), (3, 5)], MS
         )
         assert len(mnemonics) == 5
-        assert len(sum(mnemonics, [])) == 19
+        assert len(functools.reduce(operator.iadd, mnemonics, [])) == 19
 
 
 def test_invalid_sharing():
@@ -142,24 +144,22 @@ def test_invalid_sharing():
 
 
 def test_vectors():
-    with open("vectors.json", "r") as f:
+    with open("vectors.json") as f:
         vectors = json.load(f)
     for description, mnemonics, secret_hex, xprv in vectors:
         if secret_hex:
             secret = bytes.fromhex(secret_hex)
-            assert secret == shamir.combine_mnemonics(
-                mnemonics, b"TREZOR"
-            ), 'Incorrect secret for test vector "{}".'.format(description)
-            assert (
-                BIP32Key.fromEntropy(secret).ExtendedKey() == xprv
-            ), 'Incorrect xprv for test vector "{}".'.format(description)
+            assert secret == shamir.combine_mnemonics(mnemonics, b"TREZOR"), (
+                f'Incorrect secret for test vector "{description}".'
+            )
+            assert BIP32Key.fromEntropy(secret).ExtendedKey() == xprv, (
+                f'Incorrect xprv for test vector "{description}".'
+            )
         else:
             with pytest.raises(MnemonicError):
                 shamir.combine_mnemonics(mnemonics)
                 pytest.fail(
-                    'Failed to raise exception for test vector "{}".'.format(
-                        description
-                    )
+                    f'Failed to raise exception for test vector "{description}".'
                 )
 
 

@@ -26,7 +26,7 @@ def _round_function(i: int, passphrase: bytes, e: int, salt: bytes, r: bytes) ->
 
 def _get_salt(identifier: int, extendable: bool) -> bytes:
     if extendable:
-        return bytes()
+        return b""
     identifier_len = bits_to_bytes(ID_LENGTH_BITS)
     return CUSTOMIZATION_STRING_ORIG + identifier.to_bytes(identifier_len, "big")
 
