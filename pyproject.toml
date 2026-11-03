@@ -25,6 +25,9 @@ dev = [
 requires = ["flit_core>=3.11,<4"]
 build-backend = "flit_core.buildapi"
 
+[tool.uv]
+exclude-newer = "30 days"
+
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "RUF"]
 ignore = ["E501", "E741", "SIM300"]
