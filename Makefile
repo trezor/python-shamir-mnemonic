@@ -1,12 +1,12 @@
 PYTHON=python3
-POETRY=poetry
+UV=uv
 
 
 build:
-	$(POETRY) build
+	$(UV) build
 
 install:
-	$(POETRY) install
+	$(UV) sync
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -30,15 +30,15 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 test:
-	pytest
+	uv run pytest
 
 style_check:
-	isort --check-only shamir_mnemonic/ *.py
-	black shamir_mnemonic/ *.py --check
+	uv run isort --check-only shamir_mnemonic/ *.py
+	uv run black shamir_mnemonic/ *.py --check
 
 style:
-	black shamir_mnemonic/ *.py
-	isort shamir_mnemonic/ *.py
+	uv run black shamir_mnemonic/ *.py
+	uv run isort shamir_mnemonic/ *.py
 
 
 .PHONY: clean clean-build clean-pyc clean-test test style_check style

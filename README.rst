@@ -43,16 +43,15 @@ With pip from PyPI:
 
 From local checkout for development:
 
-Install the [Poetry](https://python-poetry.org/) tool, checkout
-`python-shamir-mnemonic` from git, and enter the poetry shell:
+Install the `uv <https://docs.astral.sh/uv/>`_ tool, checkout
+`python-shamir-mnemonic` from git, and sync the environment:
 
 .. code-block:: console
 
-    $ pip3 install poetry
     $ git clone https://github.com/trezor/python-shamir-mnemonic
     $ cd python-shamir-mnemonic
-    $ poetry install
-    $ poetry shell
+    $ uv sync
+    $ uv run pytest
 
 CLI usage
 ---------
