@@ -22,6 +22,8 @@ Fixed
 ~~~~~
 
 - `Share` and `EncryptedMasterSecret` no longer show secret bytes in their repr.
+- The `shamir create` command no longer silently rounds down a `--strength` that is
+  not a multiple of 16 bits.
 
 .. _0.3.1: https://github.com/trezor/python-shamir-mnemonic/compare/v0.3.0...HEAD
 

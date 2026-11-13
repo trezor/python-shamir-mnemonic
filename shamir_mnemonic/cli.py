@@ -123,7 +123,12 @@ def create(
                 "master_secret", "Secret bytes must be hex encoded"
             ) from e
     else:
-        secret_bytes = secrets.token_bytes(strength // 8)
+        if strength % 16 != 0:
+            raise click.BadOptionUsage(
+                "strength", "Secret strength must be a multiple of 16 bits."
+            )
+        # A negative strength yields an empty secret, which the library rejects.
+        secret_bytes = secrets.token_bytes(max(strength, 0) // 8)
 
     secret_hex = style(secret_bytes.hex(), bold=True)
     click.echo(f"Using master secret: {secret_hex}")
