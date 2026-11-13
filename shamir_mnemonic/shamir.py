@@ -314,8 +314,8 @@ def split_ems(
     """
     if len(encrypted_master_secret.ciphertext) * 8 < MIN_STRENGTH_BITS:
         raise ValueError(
-            "The length of the master secret must be "
-            f"at least {bits_to_bytes(MIN_STRENGTH_BITS)} bytes."
+            "The length of the master secret must be at least "
+            f"{MIN_STRENGTH_BITS} bits."
         )
 
     if not 0 <= encrypted_master_secret.identifier < 2**ID_LENGTH_BITS:

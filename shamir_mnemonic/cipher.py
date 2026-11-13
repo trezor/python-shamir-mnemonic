@@ -5,6 +5,7 @@ from .constants import (
     CUSTOMIZATION_STRING_ORIG,
     ID_LENGTH_BITS,
     ITERATION_EXP_LENGTH_BITS,
+    MIN_STRENGTH_BITS,
     ROUND_COUNT,
 )
 from .utils import bits_to_bytes
@@ -43,6 +44,12 @@ def encrypt(
         raise ValueError(
             "The iteration exponent must be between 0 and "
             f"{2**ITERATION_EXP_LENGTH_BITS - 1}."
+        )
+
+    if len(master_secret) * 8 < MIN_STRENGTH_BITS:
+        raise ValueError(
+            "The length of the master secret must be at least "
+            f"{MIN_STRENGTH_BITS} bits."
         )
 
     if len(master_secret) % 2 != 0:
