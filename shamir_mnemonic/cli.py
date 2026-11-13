@@ -136,9 +136,17 @@ def create(
     else:
         passphrase_bytes = b""
 
-    mnemonics = generate_mnemonics(
-        group_threshold, groups, secret_bytes, passphrase_bytes, extendable, exponent
-    )
+    try:
+        mnemonics = generate_mnemonics(
+            group_threshold,
+            groups,
+            secret_bytes,
+            passphrase_bytes,
+            extendable,
+            exponent,
+        )
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
 
     for i, (group, (m, n)) in enumerate(zip(mnemonics, groups)):
         group_str = (
