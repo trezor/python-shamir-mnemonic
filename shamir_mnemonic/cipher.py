@@ -4,6 +4,7 @@ from .constants import (
     BASE_ITERATION_COUNT,
     CUSTOMIZATION_STRING_ORIG,
     ID_LENGTH_BITS,
+    ITERATION_EXP_LENGTH_BITS,
     ROUND_COUNT,
 )
 from .utils import bits_to_bytes
@@ -38,6 +39,12 @@ def encrypt(
     identifier: int,
     extendable: bool,
 ) -> bytes:
+    if not 0 <= iteration_exponent < 2**ITERATION_EXP_LENGTH_BITS:
+        raise ValueError(
+            "The iteration exponent must be between 0 and "
+            f"{2**ITERATION_EXP_LENGTH_BITS - 1}."
+        )
+
     if len(master_secret) % 2 != 0:
         raise ValueError(
             "The length of the master secret in bytes must be an even number."

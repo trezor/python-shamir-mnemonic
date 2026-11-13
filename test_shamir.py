@@ -10,6 +10,7 @@ from bip32utils import BIP32Key
 
 import shamir_mnemonic as shamir
 from shamir_mnemonic import MnemonicError
+from shamir_mnemonic.constants import ID_LENGTH_BITS, ITERATION_EXP_LENGTH_BITS
 
 MS = b"ABCDEFGHIJKLMNOP"
 
@@ -213,3 +214,45 @@ def test_repr_hides_secret():
 
     share = shamir.split_ems(1, [(3, 5)], encrypted_master_secret)[0][0]
     assert repr(share.value) not in repr(share)
+
+
+@pytest.mark.parametrize("exponent", [-1, 16, 32, 256])
+def test_invalid_iteration_exponent_rejected_before_encryption(monkeypatch, exponent):
+    def unexpected_round(*args):
+        pytest.fail("Invalid exponent reached the expensive key derivation")
+
+    monkeypatch.setattr(shamir.cipher, "_round_function", unexpected_round)
+    with pytest.raises(ValueError, match=r"iteration exponent.*0.*15"):
+        shamir.generate_mnemonics(1, [(1, 1)], MS, iteration_exponent=exponent)
+
+
+@pytest.mark.parametrize("extendable", [False, True])
+@pytest.mark.parametrize("exponent", [0, 1, 15])
+def test_iteration_exponent_metadata_boundaries(monkeypatch, extendable, exponent):
+    # Metadata boundary coverage only: keep the high valid exponent inexpensive.
+    # Existing round-trip and vector tests exercise the real encryption function.
+    monkeypatch.setattr(
+        shamir.cipher, "_round_function", lambda *args: bytes(len(MS) // 2)
+    )
+    [[mnemonic]] = shamir.generate_mnemonics(
+        1, [(1, 1)], MS, extendable=extendable, iteration_exponent=exponent
+    )
+    share = shamir.Share.from_mnemonic(mnemonic)
+    assert share.iteration_exponent == exponent
+    assert share.extendable is extendable
+    assert shamir.combine_mnemonics([mnemonic]) == MS
+
+
+@pytest.mark.parametrize(
+    ("identifier", "iteration_exponent", "error"),
+    [
+        (-1, 0, "identifier"),
+        (2**ID_LENGTH_BITS, 0, "identifier"),
+        (0, -1, "iteration exponent"),
+        (0, 2**ITERATION_EXP_LENGTH_BITS, "iteration exponent"),
+    ],
+)
+def test_split_ems_rejects_out_of_range_metadata(identifier, iteration_exponent, error):
+    ems = shamir.EncryptedMasterSecret(identifier, True, iteration_exponent, bytes(16))
+    with pytest.raises(ValueError, match=error):
+        shamir.split_ems(1, [(1, 1)], ems)

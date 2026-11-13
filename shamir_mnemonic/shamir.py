@@ -32,6 +32,7 @@ from .constants import (
     GROUP_PREFIX_LENGTH_WORDS,
     ID_EXP_LENGTH_WORDS,
     ID_LENGTH_BITS,
+    ITERATION_EXP_LENGTH_BITS,
     MAX_SHARE_COUNT,
     MIN_STRENGTH_BITS,
     SECRET_INDEX,
@@ -317,6 +318,21 @@ def split_ems(
             f"at least {bits_to_bytes(MIN_STRENGTH_BITS)} bytes."
         )
 
+    if not 0 <= encrypted_master_secret.identifier < 2**ID_LENGTH_BITS:
+        raise ValueError(
+            f"The identifier must be between 0 and {2**ID_LENGTH_BITS - 1}."
+        )
+
+    if (
+        not 0
+        <= encrypted_master_secret.iteration_exponent
+        < 2**ITERATION_EXP_LENGTH_BITS
+    ):
+        raise ValueError(
+            "The iteration exponent must be between 0 and "
+            f"{2**ITERATION_EXP_LENGTH_BITS - 1}."
+        )
+
     if group_threshold > len(groups):
         raise ValueError(
             "The requested group threshold must not exceed the number of groups."
@@ -387,7 +403,7 @@ def generate_mnemonics(
         reconstruct the group secret.
     :param master_secret: The master secret to split.
     :param passphrase: The passphrase used to encrypt the master secret.
-    :param int iteration_exponent: The encryption iteration exponent.
+    :param int iteration_exponent: The encryption iteration exponent, from 0 to 15.
     :return: List of groups mnemonics.
     """
     identifier = _random_identifier()
